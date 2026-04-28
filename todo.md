@@ -6,7 +6,7 @@
 - Terminar a formatação dos csv's
 
 ### De tarde
-- 
+- arrumar coluna de tipos e trasnformar em 18 novas colunas 
 - Começar a implementar as técnicas de aprendizado
  - Escolher duas
 
