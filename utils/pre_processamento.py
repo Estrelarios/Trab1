@@ -1,5 +1,7 @@
 import pandas as pd
-from utils.print_customizado import cprint
+from print_customizado import cprint
+from ler_dataset_processado import ler_datasets
+from time import sleep
 
 """# Preparação de dados
 
@@ -26,6 +28,7 @@ def pre_processar_dataset_pokemon(df_pokemon):
   """Realiza o pré-processamento do dataset de pokemon, realizando:
   1. Crop dos atributos #, Name, Generation e Legendary
   2. Transforma Type 1 e Type 2 em colunas de vetores binários
+  3. Junta os 2 tipos em um único vetor binário
 
   Returns:
     Dataframe : df_pokemon_proc
@@ -50,31 +53,67 @@ def pre_processar_dataset_pokemon(df_pokemon):
   df_proc['Type 1'] = vetor1.values.tolist()
   df_proc['Type 2'] = vetor2.values.tolist()
 
-  # Salva o dataset processado
-  # a lista será salva como uma string "[0, 1, 0...]" no csv
-  df_proc.to_csv("datasets_processados/pokemon_proc.csv", index=False)
+  # 5. Criar uma nova coluna 'Type Vector' que é a soma dos vetores de Type 1 e Type 2
+  df_proc['Tipos'] = df_proc.apply(lambda row: [max(a, b) for a, b in zip(row['Type 1'], row['Type 2'])], axis=1)
+
+  # 6. Dropa as colunas originais de Type 1 e Type 2, mantendo apenas o vetor combinado
+  df_proc = df_proc.drop(['Type 1', 'Type 2'], axis='columns')
 
   df_pokemon_proc = df_proc
 
   return df_pokemon_proc
 
-def pre_processar_datasets():
+def pre_processar_dataset_combats(df_combats, df_pokemon):
+  """Pré-processa o dataset de combats, realizando:
+
+  1. Para cada batalha, substitui o vencedor da terceira coluna por 0 ou 1 dependendo se o vencedor é o primeiro ou segundo pokemon, respectivamente.
+  2. Troca dos ids do pokemon pelos atributos do dataset pokemon
+  
+  Returns:
+    Dataframe: df_combat_proc
+  """
+  # 1. Substituir o vencedor por 0 ou 1
+
+  df_combats["Winner"] = (df_combats["Winner"] == df_combats["Second_pokemon"]).astype(int)
+
+  df_pokemon.index = df_pokemon.index + 1
+
+    # Para cada coluna do pokemon, mapeia o valor do First e Second pokemon
+  for coluna in df_pokemon.columns:
+      df_combats[f"First_{coluna}"] = df_combats["First_pokemon"].map(df_pokemon[coluna])
+  for coluna in df_pokemon.columns:
+      df_combats[f"Second_{coluna}"] = df_combats["Second_pokemon"].map(df_pokemon[coluna])
+
+  # Remove as colunas de ID originais
+  df_combats = df_combats.drop(["First_pokemon", "Second_pokemon"], axis="columns")
+  
+  return df_combats
+
+
+def pre_processar_dados():
   
   df_combats, df_pokemon = ler_datasets()
 
   df_pokemon_proc = pre_processar_dataset_pokemon(df_pokemon)
 
-  return df_combats, df_pokemon_proc
+  df_combats_proc = pre_processar_dataset_combats(df_combats, df_pokemon_proc)
+
+  # Salva o dataset processado
+  df_combats_proc.to_csv("datasets_processados/dados.csv", index=False)
+
+  return 0
+
 
 def main():
   
     cprint("Iniciando Pré-Processamento dos datasets")
 
-    df_combats, df_pokemon = pre_processar_datasets()
+    pre_processar_dados()
+    sleep(3)
+    dados = ler_datasets()
 
     cprint("Processamento concluído!")
-    cprint(f"Exemplo do vetor do primeiro Pokémon (Tipo 1): {df_pokemon['Type 1'].iloc[0]}")
-    cprint(f"Tamanho do vetor: {len(df_pokemon['Type 1'].iloc[0])} tipos mapeados.")
+    # cprint(f"{dados.head()}")
 
 if __name__ == "__main__":
   main()
