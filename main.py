@@ -1,74 +1,31 @@
-import sklearn as sk
-import pandas as pd
-"""# Preparação de dados
+from time import time
+from utils.pre_processamento import pre_processar_datasets
+from utils.print_customizado import cprint
 
-1. Unir datasets
-2. Substituir Ids e nomes de pokemon por algum arranjo dos atributos
-3. ban no is_legendary e geração
-
-## Ideias
-
-Pandas.getdummy() para vetorizar os tipos de pokemon
-"""
 
 def main():
-  # Paths
-  path_combats = "raw/combats.csv"
-  path_pokemons = "raw/pokemon.csv"
+    
+    inicio = time()
+    
+    cprint("Iniciando fluxo principal...")
+    
+    # Chama o processamento
+    df_combat, df_pokemon = pre_processar_datasets()
+    
+    cprint(f"Sucesso! Dataset de Pokémon processado com {df_pokemon.shape[0]} linhas.")
 
-  # Transforma em Dataframe Pandas
-  df_combats = pd.read_csv(path_combats)
-  df_pokemon = pd.read_csv(path_pokemons)
-
-  # print(df_combats)
-  # print(df_pokemon)
-
-  """# Crop nos atributos"""
-
-  df_pokemon_drop = df_pokemon.drop(["Name", "#", "Generation", "Legendary"], axis=1)
-
-  #print(df_pokemon_drop)
-
-  """# Dummy
-
-  vetorizar os tipos de pokemons com get_dummy
-
-  ex:
-  """
-
-  dummies_1 = pd.get_dummies(df_pokemon_drop['Type 1'])
-  dummies_2 = pd.get_dummies(df_pokemon_drop['Type 2'])
-  # print(dummies_1)
-
-  df_pokemon_drop = pd.concat([df_pokemon_drop, dummies_1, dummies_2], axis=1)
-
-  #printar = pd.read_csv('raw\combats.csv')
-  pd.set_option("display.max_rows", None)
-  pd.set_option("display.max_columns", None)
-  
-
-  # print(df_pokemon_drop)
-
-  print(dummies_1.iloc[0].values)
+    # 1. Preparar dados: train_test_split
+    # 2. 
 
 
-  # Vetores temporários para formar os dataframes Type 1 e Type 2
-  tipos_1 = []
-  tipos_2 = []
+    # Para cada metodo de aprendizado no diretorio metodo aprendizado
 
-  # Loop para vetorizar os tipos
-  for i in range(len(df_pokemon_drop)):
 
-    # 
-    dummies_1.iloc[i].values
 
-    tipos_1.append()
-    tipos_2.append(dummies_2.iloc[0].values)
-    df_pokemon_drop
-  
 
-  
+
+
 
 
 if __name__ == "__main__":
-  main()
+    main()
