@@ -1,6 +1,6 @@
 import pandas as pd
-from print_customizado import cprint
-from ler_dataset_processado import ler_datasets
+from utils.print_customizado import cprint
+from utils.ler_dataset_processado import ler_datasets
 from time import sleep
 
 """# Preparação de dados
@@ -46,18 +46,18 @@ def pre_processar_dataset_pokemon(df_pokemon):
   df_proc['Type 1'] = pd.Categorical(df_proc['Type 1'], categories=tipos_possiveis)
   df_proc['Type 2'] = pd.Categorical(df_proc['Type 2'], categories=tipos_possiveis)
 
+  print("AAAAAAAAAAAAAAA")
+  print(df_proc['Type 1'])
+
   vetor1 = pd.get_dummies(df_proc['Type 1']).astype(int)
   vetor2 = pd.get_dummies(df_proc['Type 2']).astype(int)
 
-  # 4. Converter as linhas de dummies em listas (o "vetor binário" que você pediu)
-  df_proc['Type 1'] = vetor1.values.tolist()
-  df_proc['Type 2'] = vetor2.values.tolist()
+  # 4. Combinar os dois vetores com max e criar 18 colunas separadas
+  tipos_combinados = vetor1.combine(vetor2, lambda a, b: a.combine(b, max))
 
-  # 5. Criar uma nova coluna 'Type Vector' que é a soma dos vetores de Type 1 e Type 2
-  df_proc['Tipos'] = df_proc.apply(lambda row: [max(a, b) for a, b in zip(row['Type 1'], row['Type 2'])], axis=1)
-
-  # 6. Dropa as colunas originais de Type 1 e Type 2, mantendo apenas o vetor combinado
+  # 5. Anexar as 18 colunas ao dataframe e remover Type 1 e Type 2
   df_proc = df_proc.drop(['Type 1', 'Type 2'], axis='columns')
+  df_proc = pd.concat([df_proc, tipos_combinados], axis=1)
 
   df_pokemon_proc = df_proc
 
@@ -104,12 +104,16 @@ def pre_processar_dados():
   return 0
 
 
+from tqdm import tqdm
+
 def main():
   
     cprint("Iniciando Pré-Processamento dos datasets")
 
     pre_processar_dados()
-    sleep(3)
+    print("Lendo os datasets processados...")
+    for _ in tqdm(range(3), desc="Carregando"):
+        sleep(.5)
     dados = ler_datasets()
 
     cprint("Processamento concluído!")
