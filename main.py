@@ -13,8 +13,8 @@ Pandas.getdummy() para vetorizar os tipos de pokemon
 
 def main():
   # Paths
-  path_combats = "/combats.csv"
-  path_pokemons = "/pokemon.csv"
+  path_combats = "raw/combats.csv"
+  path_pokemons = "raw/pokemon.csv"
 
   # Transforma em Dataframe Pandas
   df_combats = pd.read_csv(path_combats)
@@ -27,7 +27,7 @@ def main():
 
   df_pokemon_drop = df_pokemon.drop(["Name", "#", "Generation", "Legendary"], axis=1)
 
-  print(df_pokemon_drop)
+  #print(df_pokemon_drop)
 
   """# Dummy
 
@@ -38,12 +38,34 @@ def main():
 
   dummies_1 = pd.get_dummies(df_pokemon_drop['Type 1'])
   dummies_2 = pd.get_dummies(df_pokemon_drop['Type 2'])
-  #print(dummies_1)
+  # print(dummies_1)
 
-  #df_pokemon_drop = pd.concat([df_pokemon_drop, dummies_1, dummies_2], axis=1)
+  df_pokemon_drop = pd.concat([df_pokemon_drop, dummies_1, dummies_2], axis=1)
 
-  print(df_pokemon_drop)
-    # df_pokemon_drop[0][0] = dummies_1[0]
+  #printar = pd.read_csv('raw\combats.csv')
+  pd.set_option("display.max_rows", None)
+  pd.set_option("display.max_columns", None)
+  
+
+  # print(df_pokemon_drop)
+
+  print(dummies_1.iloc[0].values)
+
+
+  # Vetores temporários para formar os dataframes Type 1 e Type 2
+  tipos_1 = []
+  tipos_2 = []
+
+  # Loop para vetorizar os tipos
+  for i in range(len(df_pokemon_drop)):
+
+    # 
+    dummies_1.iloc[i].values
+
+    tipos_1.append()
+    tipos_2.append(dummies_2.iloc[0].values)
+    df_pokemon_drop
+  
 
   
 
