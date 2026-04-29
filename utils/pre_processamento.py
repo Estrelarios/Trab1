@@ -59,6 +59,8 @@ def pre_processar_dataset_pokemon(df_pokemon):
   df_proc = df_proc.drop(['Type 1', 'Type 2'], axis='columns')
   df_proc = pd.concat([df_proc, tipos_combinados], axis=1)
 
+  # df_proc = df_proc.replace(1, 255)
+
   df_pokemon_proc = df_proc
 
   return df_pokemon_proc

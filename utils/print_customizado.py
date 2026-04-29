@@ -1,6 +1,6 @@
 
 
-def cprint(texto, tempo=None):
+def cprint(texto, label=None, num_espacos=0):
     """Custom Print
 
     Print customizado que printa o [Sys] na frente para melhor visualização
@@ -8,8 +8,20 @@ def cprint(texto, tempo=None):
     Args:
         texto (str): Texto que será printado
     """
+    string = ""
 
-    if tempo:
-        print(f"[{tempo}s] {texto}")
+    string += " "*num_espacos
+
+    if label:
+        string += f"[ {label} ] "
     else:
-        print(f"[Sys] {texto}")
+        string += f"[ Sys ] "
+
+    string += texto
+
+    print(string)
+
+if __name__ == "__main__":
+
+    for i in range(10):
+        cprint("Texto bem gamer", label="GAMER", num_espacos=i)
