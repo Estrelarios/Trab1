@@ -10,9 +10,12 @@ O projeto visa identificar qual técnica de ML melhor prediz o resultado de um c
 ## Técnicas Utilizadas
 
 As seguintes técnicas foram implementadas e analisadas neste projeto:
-- a
-- 
-- 
+- KNN
+- Arvore de decisão
+- Naive Bayes
+- SVM
+- Perceptron
+- MLP
 
 ## Pré-processamento dos Dados
 
@@ -53,7 +56,7 @@ pip install pandas scikit-learn tqdm
     ```
 
 ## Saída dos Resultados
-Após a conclusão, os resultados consolidados serão salvos em `out/resultados.csv`. O arquivo seguirá o formato:
+Após a conclusão, os resultados consolidados serão salvos em `resultados/resultados.csv`. O arquivo seguirá o formato:
 | iteração | Técnica 1 | Técnica 2 | ... | Técnica N |
 | :---: | :---: | :---: | :---: | :---: |
 | 0 | 0.85 | 0.82 | ... | 0.88 |
@@ -65,4 +68,4 @@ Após a conclusão, os resultados consolidados serão salvos em `out/resultados.
 - `datasets_processados/`: Dados limpos e prontos para o modelo.
 - `metodos_aprendizado/`: Implementação dos algoritmos de ML.
 - `utils/`: Scripts de pré-processamento e ferramentas auxiliares.
-- `out/`: Pasta onde os resultados finais são armazenados.
+- `resultados/`: Pasta onde os resultados finais são armazenados.

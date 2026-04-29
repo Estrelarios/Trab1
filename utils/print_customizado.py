@@ -1,6 +1,6 @@
 
 
-def cprint(texto, label=None, num_espacos=0):
+def cprint(texto, label=None, num_espacos=0, jump_line=True):
     """Custom Print
 
     Print customizado que printa o [Sys] na frente para melhor visualização
@@ -15,11 +15,14 @@ def cprint(texto, label=None, num_espacos=0):
     if label:
         string += f"[ {label} ] "
     else:
-        string += f"[ Sys ] "
+        string += f"[ SYS ] "
 
     string += texto
 
-    print(string)
+    if jump_line:
+        print(string)
+    else:
+        print(string, end="")
 
 if __name__ == "__main__":
 
