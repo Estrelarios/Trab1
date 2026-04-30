@@ -1,67 +1,72 @@
-from time import time
-from pandas import DataFrame
-
-from utils.pre_processamento import pre_processar_dados
+import os
+import subprocess
+import time
+import pandas as pd
+import argparse
 from utils.print_customizado import cprint
-from utils.ler_dataset_processado import ler_datasets
-from metodos_aprendizado.metodosAprendizado import MetodosAprendizado
-
-
-
 
 def main():
+
+    # 1. Configuração do Orquestrador
+    parser = argparse.ArgumentParser(description="Orquestrador do Pipeline de ML - Pokémon")
+    parser.add_argument("--teste", action="store_true", help="Executa o pipeline em modo de teste.")
+    args = parser.parse_args()
+
+    # Define o total de iterações e o limite de janelas simultâneas
+    num_iteracoes = 4 if args.teste else 20
+    limite_janelas = 2 if args.teste else 4
     
-    inicio = time()
+    # Define o arquivo de saída dependendo do modo
+    nome_arquivo = "resultados_teste.csv" if args.teste else "resultados.csv"
+    caminho_csv = os.path.join("resultados", nome_arquivo)
+
+    # Cria a pasta de resultados caso não exista
+    if not os.path.exists("resultados"):
+        os.makedirs("resultados")
+
+    # 2. Checkpoint: Verifica quais iterações já foram feitas
+    concluidas = []
+    if os.path.exists(caminho_csv):
+        try:
+            df = pd.read_csv(caminho_csv)
+            if 'iteracao' in df.columns:
+                concluidas = df['iteracao'].tolist()
+        except Exception:
+            pass
+
+    # Ver quantas iterações estão pendentes
+    pendentes = [i for i in range(1, num_iteracoes + 1) if i not in concluidas]
     
-    cprint("Iniciando fluxo principal...", label="MAIN")
-    
-    # Le o dataset já processado
-    dados = ler_datasets("dados")
+    cprint(f"Status: {len(concluidas)} concluídas, {len(pendentes)} pendentes.", label="CHEFE")
 
-    cprint(f"Sucesso! Dataset de Pokémon processado com {dados.shape[0]} linhas.", label="MAIN")
+    if not pendentes:
+        cprint("Todas as iterações já foram concluídas!", label="CHEFE")
+        return
 
-    media = 0
-    num_repeticoes = 1
-    ma = MetodosAprendizado()
-    for i in range(num_repeticoes):
-        cprint(f"#################### Iteração {i+1}/{num_repeticoes}: ####################", label="MAIN")
-        cprint("50% o conjunto de dados para treino, 25% para teste, 25% para validação.", label="MAIN")
+    # 3. Gerenciamento de Processos 
+    processos_ativos = []
 
-        
-        
-        x_treino, y_treino, x_teste, y_teste, x_val, y_val = ma.split_dataset(dados)
+    for it in pendentes:
+        while len(processos_ativos) >= limite_janelas:
+            processos_ativos = [p for p in processos_ativos if p.poll() is None]
+            time.sleep(1)
 
-        resultados = ma.disparar_comando(parametros={
-            "x_treino": x_treino,
-            "y_treino": y_treino,
-            "x_teste":  x_teste,
-            "y_teste":  y_teste,
-            "x_val":    x_val,
-            "y_val":    y_val,
-        })
-        #print(resultados)
+        cprint(f"Abrindo terminal para Iteração {it}...", label="ORQUESTRADOR")
 
-        ############## ideia 2 ###############
+        flag_teste = "--teste" if args.teste else ""
+        comando_python = f"python worker.py --iteracao {it} {flag_teste}"
 
-        # from metodos_aprendizado import *
-
-        # funcoes = [knn, nb, ad, ]
-
-        # for funcao in funcoes:
-        #     acuracia = funcao(x_treino, y_treino, x_teste, y_teste, x_val, y_val)
+        # Chamamos o cmd.exe diretamente com /c para abrir o worker.
+        # /c: executa o comando e TERMINA o processo (fechando a janela),
+        # permitindo que o orquestrador saiba que uma vaga foi liberada.
+        p = subprocess.Popen(
+            ["cmd.exe", "/c", comando_python], 
+            creationflags=subprocess.CREATE_NEW_CONSOLE
+        )
+        processos_ativos.append(p)
 
 
-        # cprint("Executando o Random Forest...", label="MAIN")
-        # cprint("Fazendo busca de hiperparametros...", label="MAIN")
-    
-    # cprint(f"Media KNN: {media/num_repeticoes}", label="MAIN")
-    # 2. 
-
-
-    # Para cada metodo de aprendizado no diretorio metodo aprendizado
-
+    cprint("Todas as iterações pendentes foram disparadas.", label="CHEFE")
 
 if __name__ == "__main__":
-    
     main()
-
