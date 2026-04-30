@@ -100,7 +100,7 @@ class MetodosAprendizado:
         maiorAcc = -1
         for j in ("distance", "uniform"):
             for i in tqdm(k_range, desc=f"weights='{j}'"):
-                KNN = KNeighborsClassifier(n_neighbors=i, weights=j, n_jobs=-1)
+                KNN = KNeighborsClassifier(n_neighbors=i, weights=j)
                 KNN.fit(x_treino, y_treino)
                 opiniao = KNN.predict(x_teste)
                 Acc = accuracy_score(y_teste, opiniao)
