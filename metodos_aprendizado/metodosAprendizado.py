@@ -18,18 +18,7 @@ from utils.ler_dataset_processado import ler_datasets
 
 class MetodosAprendizado:
     def __init__(self):
-        pass
-
-        """Dispara o comando com o texto stringComando
-    
-        Args:
-            stringComando (str): Nome da função alvo
-            callback (str, optional): Texto de erro que a função pode retornar. Defaults to None.
-
-        Returns:
-            method: retorna o que a 
-        """
-
+        self.modo_teste = False
 
     def disparar_comando(self, parametros: dict = None, callback=None):
         """
@@ -40,6 +29,9 @@ class MetodosAprendizado:
     
         if parametros is None:
             parametros = {}
+
+        if parametros["modo_teste"]:
+            self.modo_teste = True
         
         resultados = {}
         metodos = [m for m in dir(self) if m.startswith("metodo") and callable(getattr(self, m))]
@@ -99,10 +91,15 @@ class MetodosAprendizado:
 
         cprint("Executando o KNN...", label="KNN")
 
+        # Definido o range (reduzido para modo teste)
+        k_range = range(1,51)
+        if self.modo_teste:
+            k_range = range(1,2)
+        
         cprint("Fazendo busca de hiperparametros...", label="KNN")
         maiorAcc = -1
         for j in ("distance", "uniform"):
-            for i in tqdm(range(1, 2), desc=f"weights='{j}'"):
+            for i in tqdm(k_range, desc=f"weights='{j}'"):
                 KNN = KNeighborsClassifier(n_neighbors=i, weights=j, n_jobs=-1)
                 KNN.fit(x_treino, y_treino)
                 opiniao = KNN.predict(x_teste)
@@ -111,8 +108,7 @@ class MetodosAprendizado:
                     maiorAcc = Acc
                     melhor_modelo = KNN
                     
-        # print("Salvando o modelo...")
-        jb.dump(melhor_modelo, "ultimo_modelo_KNN")
+
         print()
         cprint(f"Melhor configuração para o KNN", label="KNN")
         cprint(f"{melhor_modelo.get_params()}", label="KNN")
@@ -138,13 +134,24 @@ class MetodosAprendizado:
         
         cprint("Executando a Árvore de decisão...", label="AD")
 
+        # Definido os ranges (reduzido para modo teste)
+        i_range = range(1,11)
+        k_range = range(1,11)
+        l_range = range(2,16)
+
+        # Altera os ranges para modo teste
+        if self.modo_teste:
+            i_range = range(1,2)
+            k_range = range(1,2)
+            l_range = range(2,3)
+
         cprint("Fazendo busca de hiperparametros...", label="AD")
 
         maior = -1
         for j in ("entropy","gini"):  #criterion
-            for i in tqdm(range(1, 11), ascii=True, desc=f"[ AD ] criteion = {j} "):      #max_depth
-                for k in tqdm(range(1, 11), desc=f"[ AD ] max_depth = {i}", leave=False, ascii=True):    #min_samples_leaf
-                    for l in range (2,16):  #min_samples_split
+            for i in tqdm(i_range, ascii=True, desc=f"[ AD ] criteion = {j} "):      #max_depth
+                for k in tqdm(k_range, desc=f"[ AD ] max_depth = {i}", leave=False, ascii=True):    #min_samples_leaf
+                    for l in l_range:  #min_samples_split
                         for m in ('best','random'): #splitter
                             AD = DecisionTreeClassifier(criterion=j,max_depth=i,min_samples_leaf=k,min_samples_split=l,splitter=m)
                             AD.fit(x_treino,y_treino)

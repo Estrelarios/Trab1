@@ -55,6 +55,16 @@ pip install pandas scikit-learn tqdm
     python main.py
     ```
 
+### Modo de Teste (Desenvolvedor)
+Para validar o funcionamento do pipeline de forma rápida (em segundos), você pode utilizar a flag `--teste`.
+```bash
+python main.py --teste
+```
+**O que o modo de teste altera:**
+- **Amostragem:** Utiliza apenas 100 linhas aleatórias do dataset.
+- **Iterações:** Executa apenas 2 iterações do loop principal.
+- **Busca de Hiperparâmetros:** Reduz drasticamente o espaço de busca (ex: testa apenas uma configuração para KNN e Árvore de Decisão).
+
 ## Saída dos Resultados
 Após a conclusão, os resultados consolidados serão salvos em `resultados/resultados.csv`. O arquivo seguirá o formato:
 | iteração | Técnica 1 | Técnica 2 | ... | Técnica N |
