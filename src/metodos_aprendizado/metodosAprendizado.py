@@ -2,6 +2,7 @@ import sklearn as sk
 import joblib as jb
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.naive_bayes import GaussianNB
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 from sklearn.preprocessing import StandardScaler
 import numpy as np
@@ -170,12 +171,25 @@ class MetodosAprendizado:
 
         """Aplicando a melhor configuração sobre o Conjunto de Teste"""
 
-        opiniao = melhor_modelo.predict(x_teste)
-        acc_teste = accuracy_score(y_teste, opiniao)
-        cprint(f"Acurácia sobre o teste: {acc_teste:.4f}", label="AD")
+        opiniao = melhor_modelo.predict(x_val)
+        acuracia = accuracy_score(y_val, opiniao)
+        cprint(f"Acurácia sobre o teste: {acuracia:.4f}", label="AD")
         
-        return acc_teste
+        return acuracia
     
+    def metodo_naiveBayes(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
+        cprint("Executando o Naive Bayes...", label="NB")
+
+        GNB = GaussianNB()
+        GNB.fit(x_treino, y_treino)
+
+        opiniao = GNB.predict(x_val)
+
+        acuracia = accuracy_score(y_val, opiniao)
+
+        cprint(f"Acurácia sobre o teste: {acuracia}", label="NB")
+
+        return acuracia
 
     def metodo_svm(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
         cprint("Executando o SVM...", label="SVM")
@@ -185,6 +199,4 @@ class MetodosAprendizado:
         cprint("Executando a Random Forest...", label="RF")
         pass
 
-    def metodo_naiveBayes(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
-        cprint("Executando o Naive Bayes...", label="NB")
-        pass
+
