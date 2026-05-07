@@ -1,23 +1,34 @@
+import time
 
-
-def cprint(texto, label=None, num_espacos=0, jump_line=True):
+def cprint(texto, label=None, num_idents=0, jump_line=True):
     """Custom Print
 
-    Print customizado que printa o [Sys] na frente para melhor visualização
-    
     Args:
-        texto (str): Texto que será printado
+        texto (str): Texto a ser printado
+        label (str, optional): Texto que vai dentro dos colchetes. Defaults to None.
+        num_idents (int, optional): Espaços antes do print. Defaults to 0.
+        jump_line (bool, optional): Pode prefir por não pular a linha. Defaults to True.
+    
+    Exemplo:
+
+    (num_idents espaços)[ LABEL HH:MM:SS ] texto (jump_line)
+    
     """
+
     string = ""
 
-    string += " "*num_espacos
+    # Hora atual
+    hora_atual = time.strftime("%H:%M:%S")
 
-    if label:
-        string += f"[ {label} ] "
-    else:
-        string += f"[ SYS ] "
+    # Label
+    prefixo = label if label else "SYS"
 
-    string += texto
+    # Formato: [ LABEL hh:mm:ss ]
+    tag = f"[ {prefixo} {hora_atual} ]"
+
+    ident = " " * num_idents
+
+    string = f"{ident}{tag} {texto}"
 
     if jump_line:
         print(string)
@@ -27,4 +38,4 @@ def cprint(texto, label=None, num_espacos=0, jump_line=True):
 if __name__ == "__main__":
 
     for i in range(10):
-        cprint("Texto bem gamer", label="GAMER", num_espacos=i)
+        cprint("Texto bem gamer", label="GAMER", num_idents=i)
