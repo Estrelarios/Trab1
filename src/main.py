@@ -3,6 +3,11 @@ import subprocess
 import time
 import pandas as pd
 import argparse
+import sys
+
+# Adiciona a pasta src ao path para permitir imports internos
+sys.path.append(os.path.dirname(__file__))
+
 from utils.print_customizado import cprint
 
 def main():
@@ -54,7 +59,7 @@ def main():
         cprint(f"Abrindo terminal para Iteração {it}...", label="ORQUESTRADOR")
 
         flag_teste = "--teste" if args.teste else ""
-        comando_python = f"python worker.py --iteracao {it} {flag_teste}"
+        comando_python = f"python src/worker.py --iteracao {it} {flag_teste}"
 
         # Chamamos o cmd.exe diretamente com /c para abrir o worker.
         # /c: executa o comando e TERMINA o processo (fechando a janela),

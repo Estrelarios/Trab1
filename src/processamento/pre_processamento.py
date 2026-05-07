@@ -35,7 +35,7 @@ def pre_processar_dataset_pokemon(df_pokemon):
   """
 
   # 1. Remover colunas desnecessárias
-  colunas_desnecessarias = ["Name", "#", "Generation", "Legendary"]
+  colunas_desnecessarias = ["Name", "#", "Generation", "Legendary", "First_Defense", "Second_Defense"]
   df_proc = df_pokemon.drop(colunas_desnecessarias, axis='columns')
 
   # 2. Identificar todos os tipos possíveis para manter consistência nos índices

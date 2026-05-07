@@ -7,7 +7,7 @@ from sklearn.preprocessing import StandardScaler
 import numpy as np
 from tqdm import tqdm
 from pandas import DataFrame
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, RandomizedSearchCV
 import inspect
 from utils.pre_processamento import pre_processar_dados
 from utils.print_customizado import cprint
@@ -100,7 +100,7 @@ class MetodosAprendizado:
         maiorAcc = -1
         for j in ("distance", "uniform"):
             for i in tqdm(k_range, desc=f"weights='{j}'"):
-                KNN = KNeighborsClassifier(n_neighbors=i, weights=j)
+                KNN = KNeighborsClassifier(n_neighbors=i, weights=j, n_jobs=-1)
                 KNN.fit(x_treino, y_treino)
                 opiniao = KNN.predict(x_teste)
                 Acc = accuracy_score(y_teste, opiniao)
@@ -134,44 +134,47 @@ class MetodosAprendizado:
         
         cprint("Executando a Árvore de decisão...", label="AD")
 
-        # Definido os ranges (reduzido para modo teste)
-        i_range = range(1,11)
-        k_range = range(1,11)
-        l_range = range(2,16)
+        # Definição do espaço de busca
+        param_dist = {
+            'criterion': ['entropy', 'gini'],
+            'max_depth': range(1, 11),
+            'min_samples_leaf': range(1, 11),
+            'min_samples_split': range(2, 16),
+            'splitter': ['best', 'random']
+        }
 
-        # Altera os ranges para modo teste
-        if self.modo_teste:
-            i_range = range(1,2)
-            k_range = range(1,2)
-            l_range = range(2,3)
+        # Configura o número de iterações do RandomizedSearch
+        n_iter_search = 50 if not self.modo_teste else 1
+        
+        cprint(f"Fazendo busca de hiperparametros com RandomizedSearch ({n_iter_search} iterações)...", label="AD")
 
-        cprint("Fazendo busca de hiperparametros...", label="AD")
+        # Inicializa o RandomizedSearchCV
+        random_search = RandomizedSearchCV(
+            DecisionTreeClassifier(), 
+            param_distributions=param_dist,
+            n_iter=n_iter_search, 
+            cv=3, 
+            n_jobs=-1, 
+            scoring='accuracy',
+            random_state=42
+        )
 
-        maior = -1
-        for j in ("entropy","gini"):  #criterion
-            for i in tqdm(i_range, ascii=True, desc=f"[ AD ] criteion = {j} "):      #max_depth
-                for k in tqdm(k_range, desc=f"[ AD ] max_depth = {i}", leave=False, ascii=True):    #min_samples_leaf
-                    for l in l_range:  #min_samples_split
-                        for m in ('best','random'): #splitter
-                            AD = DecisionTreeClassifier(criterion=j,max_depth=i,min_samples_leaf=k,min_samples_split=l,splitter=m)
-                            AD.fit(x_treino,y_treino)
-                            opiniao = AD.predict(x_val)
-                            Acc = accuracy_score(y_val, opiniao)
-                            # print("Criterion: ",j," max_depth: ",i," min_samples_leaf: ",k," min_samples_split: ",l," splitter: ",m," Acc: ",Acc)
-                            if (Acc > maior):
-                                #cprint(f"Nova melhor configuração encontrada: {Acc}", label="AD")
-                                maior = Acc
-                                melhor_modelo = AD
+        # Executa a busca
+        random_search.fit(x_treino, y_treino)
+        
+        melhor_modelo = random_search.best_estimator_
 
         cprint("\nMelhor configuração para a AD", label="AD")
-        cprint(f"Criterion: {melhor_modelo.criterion}, max_depth: {melhor_modelo.max_depth}, min_samples_leaf: {melhor_modelo.min_samples_leaf}, min_samples_split: {melhor_modelo.min_samples_split}, splitter: {melhor_modelo.splitter}, Acc: {maior}", label="AD")
+        cprint(f"{random_search.best_params_}", label="AD")
+        cprint(f"Melhor acurácia (Treino/CV): {random_search.best_score_:.4f}", label="AD")
 
-        """Aplicando a melhor configuração sobre o **Conjunto de Teste**"""
+        """Aplicando a melhor configuração sobre o Conjunto de Teste"""
 
         opiniao = melhor_modelo.predict(x_teste)
-        cprint(f"Acurácia sobre o teste: {accuracy_score(y_teste, opiniao)}", label="AD")
+        acc_teste = accuracy_score(y_teste, opiniao)
+        cprint(f"Acurácia sobre o teste: {acc_teste:.4f}", label="AD")
         
-        return accuracy_score(y_teste, opiniao)
+        return acc_teste
     
 
     def metodo_svm(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
