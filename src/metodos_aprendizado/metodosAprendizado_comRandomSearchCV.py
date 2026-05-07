@@ -9,9 +9,9 @@ from tqdm import tqdm
 from pandas import DataFrame
 from sklearn.model_selection import train_test_split, RandomizedSearchCV
 import inspect
-from utils.pre_processamento import pre_processar_dados
+from processamento.pre_processamento import pre_processar_dados
 from utils.print_customizado import cprint
-from utils.ler_dataset_processado import ler_datasets
+from processamento.ler_dataset_processado import ler_datasets
 
 
 

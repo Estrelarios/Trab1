@@ -1,9 +1,9 @@
 from time import time
 from pandas import DataFrame
 
-from utils.pre_processamento import pre_processar_dados
+from processamento.pre_processamento import pre_processar_dados
 from utils.print_customizado import cprint
-from utils.ler_dataset_processado import ler_datasets
+from processamento.ler_dataset_processado import ler_datasets
 from metodos_aprendizado.metodosAprendizado import MetodosAprendizado
 import argparse
 

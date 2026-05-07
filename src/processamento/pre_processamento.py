@@ -1,6 +1,6 @@
 import pandas as pd
 from utils.print_customizado import cprint
-from utils.ler_dataset_processado import ler_datasets
+from processamento.ler_dataset_processado import ler_datasets
 from time import sleep
 
 """# Preparação de dados
