@@ -1,4 +1,11 @@
 *cache*
 *pyc*
 *.venv*
+
 /correlacao
+/logs
+/modelos
+
+dados2.csv
+pre_processamento2.py
+*backup*
