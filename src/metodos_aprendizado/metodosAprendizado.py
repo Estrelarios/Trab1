@@ -89,10 +89,6 @@ class MetodosAprendizado:
         x_teste, x_val, y_teste, y_val = train_test_split(x_temp, y_temp, train_size=tam_teste, test_size=tam_validacao)
 
         return x_treino, y_treino, x_teste, y_teste, x_val, y_val
-    
-
-#    def divisoes_dataset(self)
-
 
     def metodo_knn(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
 
@@ -109,39 +105,27 @@ class MetodosAprendizado:
             for i in tqdm(k_range, desc=f"weights='{j}'"):
                 KNN = KNeighborsClassifier(n_neighbors=i, weights=j, n_jobs=-1)
                 KNN.fit(x_treino, y_treino)
-                opiniao = KNN.predict(x_teste)
-                Acc = accuracy_score(y_teste, opiniao)
+                opiniao = KNN.predict(x_val) # Valida no conjunto de validação
+                Acc = accuracy_score(y_val, opiniao)
                 if (Acc > maiorAcc):
                     maiorAcc = Acc
                     melhor_modelo = KNN
 
-                    
-                    
-
         print()
-        cprint(f"Melhor configuração para o KNN", label="KNN")
-        cprint(f"{melhor_modelo.get_params()}", label="KNN")
+        cprint(f"Melhor configuração encontrada na validação:", label="KNN")
+        cprint(f"K: {melhor_modelo.n_neighbors} , Weights: {melhor_modelo.weights}, Acc: {maiorAcc}", label="KNN")
 
         # Salvando melhor modelo
         self.modelos["KNN"] = melhor_modelo
         
-        print()
-        cprint("Melhor configuração:", label="KNN")
-        cprint(f"K: {melhor_modelo.n_neighbors} , Weights: {melhor_modelo.weights}", label="KNN")
-        
-
         """**Aplicando o melhor modelo sobre o conjunto de teste**"""
 
-        # print("\n\nDesempenho sobre o conjunto de teste")
-        opiniao = melhor_modelo.predict(x_val)
-        cprint(f"K: {melhor_modelo.n_neighbors}, Acurácia sobre o teste: {accuracy_score(y_val, opiniao)}", label="KNN")
+        opiniao_teste = melhor_modelo.predict(x_teste)
+        acuracia_teste = accuracy_score(y_teste, opiniao_teste)
 
-        # cm = confusion_matrix(y_val, opiniao)
-        # print(f"\nMatriz de confusão:{cm}")
+        cprint(f"Acurácia sobre o teste: {acuracia_teste}", label="KNN")
 
-        return accuracy_score(y_val, opiniao)
-    
-
+        return acuracia_teste
     def metodo_arvoreDecisao(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
         
         cprint("Executando a Árvore de decisão...", label="AD")
@@ -181,11 +165,12 @@ class MetodosAprendizado:
         """Aplicando a melhor configuração sobre o **Conjunto de Teste**"""
 
         opiniao = melhor_modelo.predict(x_teste)
-        cprint(f"Acurácia sobre o teste: {accuracy_score(y_teste, opiniao)}", label="AD")
+        acuracia = accuracy_score(y_teste, opiniao)
+        cprint(f"Acurácia sobre o teste: {acuracia}", label="AD")
 
         self.modelos["AD"] = melhor_modelo
         
-        return accuracy_score(y_teste, opiniao)
+        return acuracia
     
     def metodo_naiveBayes(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
         cprint("Executando o Naive Bayes...", label="NB")
@@ -193,14 +178,18 @@ class MetodosAprendizado:
         GNB = GaussianNB()
         GNB.fit(x_treino, y_treino)
 
-        opiniao = GNB.predict(x_val)
+        # Validação (embora GNB não tenha muitos hiperparâmetros, seguimos o padrão)
+        opiniao_val = GNB.predict(x_val)
+        acuracia_val = accuracy_score(y_val, opiniao_val)
+        cprint(f"Acurácia sobre a validação: {acuracia_val}", label="NB")
 
-        acuracia = accuracy_score(y_val, opiniao)
-
-        cprint(f"Acurácia sobre o teste: {acuracia}", label="NB")
+        # Teste
+        opiniao_teste = GNB.predict(x_teste)
+        acuracia_teste = accuracy_score(y_teste, opiniao_teste)
+        cprint(f"Acurácia sobre o teste: {acuracia_teste}", label="NB")
 
         self.modelos["GNB"] = GNB
-        return acuracia
+        return acuracia_teste
 
     def metodo_svm(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
         cprint("Executando o SVM...", label="SVM")
@@ -221,21 +210,25 @@ class MetodosAprendizado:
                 cprint(f"Testando kernel='{kernel}', C={C}...", label="SVM")
                 SVM = SVC(kernel=kernel, C=C)
                 SVM.fit(x_treino, y_treino) # treina
-                opiniao = SVM.predict(x_val) # testa
-                acuracia = accuracy_score(y_val, opiniao) # valida
+                opiniao = SVM.predict(x_val) # valida no conjunto de validação
+                acuracia = accuracy_score(y_val, opiniao) 
 
                 # Se o modelo foi melhor do que o melhor até agora, salva ele
                 if acuracia > maior:
-                    
-                    cprint(f"Kernel: {kernel}, Acurácia sobre o teste: {acuracia}", label="SVM")
+                    cprint(f"Novo melhor Kernel: {kernel}, C: {C}, Acurácia sobre a validação: {acuracia}", label="SVM")
                     maior = acuracia
                     melhor_modelo = SVM
 
         # Salva na classe o melhor modelo encontrado
         self.modelos["SVM"] = melhor_modelo
 
-        # Retorna o melhor resultado encontrado
-        return maior
+        """Aplicando a melhor configuração sobre o **Conjunto de Teste**"""
+        opiniao_teste = melhor_modelo.predict(x_teste)
+        acuracia_teste = accuracy_score(y_teste, opiniao_teste)
+        cprint(f"Acurácia sobre o teste: {acuracia_teste}", label="SVM")
+
+        # Retorna o melhor resultado encontrado no teste
+        return acuracia_teste
 
     def metodo_randomForest(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
         cprint("Executando a Random Forest...", label="RF")
@@ -267,15 +260,18 @@ class MetodosAprendizado:
 
             if acuracia > maior:
                 melhor_modelo = RandomForest
-                
-                cprint(f"Acurácia sobre o teste melhorou: {acuracia} > {maior}", label="RF")
+                cprint(f"Acurácia sobre a validação melhorou: {acuracia} > {maior}", label="RF")
                 maior = acuracia
 
-        cprint(f"Acurácia sobre o teste: {maior}", label="RF")
-
+        # Salva na classe o melhor modelo encontrado
         self.modelos["RF"] = melhor_modelo
 
-        return maior
+        """Aplicando a melhor configuração sobre o **Conjunto de Teste**"""
+        opiniao_teste = melhor_modelo.predict(x_teste)
+        acuracia_teste = accuracy_score(y_teste, opiniao_teste)
+        cprint(f"Acurácia sobre o teste: {acuracia_teste}", label="RF")
+
+        return acuracia_teste
 
 
     def metodo_mlp(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
@@ -291,7 +287,7 @@ class MetodosAprendizado:
         # ● Tamanho do batch
 
         # Definido os ranges
-        epocas_range = range(1,15)
+        epocas_range = [30, 50, 100, 200, 500]
         lr_range = [0.0001, 0.001, 0.01, 0.1] # Learning rate
         num_camadas_escondidas_range = [1,2] # Mais que 2 é dar overclock no mouse
         neuronios_por_camada_range = range(2, 44) # Deve estar entre o numero de neuronios de entrada e o de saida
@@ -300,7 +296,7 @@ class MetodosAprendizado:
 
         # Altera os ranges caso modo teste
         if self.modo_teste:
-            epocas_range = range(1,5)
+            epocas_range = range(100, 200, 100) # testa só 100 epocas
             lr_range = [0.1] # Learning rate
             num_camadas_escondidas_range = [1] # Mais que 2 é dar overclock no mouse
             neuronios_por_camada_range = range(1,10) # Deve estar entre o numero de neuronios de entrada e o de saida
@@ -328,14 +324,14 @@ class MetodosAprendizado:
                                         activation=func_ativacao
                                     )
                                                     
-                                MLP.fit(x_treino,y_treino)
-                                opiniao = MLP.predict(x_val)
-                                Acc = accuracy_score(y_val, opiniao)
-                                # print("Criterion: ",j," max_depth: ",i," min_samples_leaf: ",k," min_samples_split: ",l," splitter: ",m," Acc: ",Acc)
-                                if (Acc > maior):
-                                    #cprint(f"Nova melhor configuração encontrada: {Acc}", label="AD")
-                                    maior = Acc
-                                    melhor_modelo = MLP
+                                    MLP.fit(x_treino,y_treino)
+                                    opiniao = MLP.predict(x_val)
+                                    Acc = accuracy_score(y_val, opiniao)
+                                    # print("Criterion: ",j," max_depth: ",i," min_samples_leaf: ",k," min_samples_split: ",l," splitter: ",m," Acc: ",Acc)
+                                    if (Acc > maior):
+                                        #cprint(f"Nova melhor configuração encontrada: {Acc}", label="AD")
+                                        maior = Acc
+                                        melhor_modelo = MLP
 
         cprint("\nMelhor configuração para a MLP", label="MLP")
         # cprint(f"Criterion: {melhor_modelo.}, max_depth: {melhor_modelo.max_depth}, min_samples_leaf: {melhor_modelo.min_samples_leaf}, min_samples_split: {melhor_modelo.min_samples_split}, splitter: {melhor_modelo.splitter}, Acc: {maior}", label="MLP")
@@ -351,5 +347,6 @@ class MetodosAprendizado:
         cprint(f"Acurácia sobre o teste: {acuracia}", label="MLP")
         
         return acuracia
+
 
 
