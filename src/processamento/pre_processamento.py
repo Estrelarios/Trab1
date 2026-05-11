@@ -1,6 +1,6 @@
 import pandas as pd
-from utils.print_customizado import cprint
 from processamento.ler_dataset_processado import ler_datasets
+from utils.print_customizado import cprint
 from time import sleep
 
 """# Preparação de dados
@@ -35,7 +35,7 @@ def pre_processar_dataset_pokemon(df_pokemon):
   """
 
   # 1. Remover colunas desnecessárias
-  colunas_desnecessarias = ["Name", "#", "Generation", "Legendary", "First_Defense", "Second_Defense"]
+  colunas_desnecessarias = ["Name", "#", "Generation", "Legendary"]
   df_proc = df_pokemon.drop(colunas_desnecessarias, axis='columns')
 
   # 2. Identificar todos os tipos possíveis para manter consistência nos índices
@@ -46,7 +46,6 @@ def pre_processar_dataset_pokemon(df_pokemon):
   df_proc['Type 1'] = pd.Categorical(df_proc['Type 1'], categories=tipos_possiveis)
   df_proc['Type 2'] = pd.Categorical(df_proc['Type 2'], categories=tipos_possiveis)
 
-  print("AAAAAAAAAAAAAAA")
   print(df_proc['Type 1'])
 
   vetor1 = pd.get_dummies(df_proc['Type 1']).astype(int)
@@ -88,6 +87,9 @@ def pre_processar_dataset_combats(df_combats, df_pokemon):
 
   # Remove as colunas de ID originais
   df_combats = df_combats.drop(["First_pokemon", "Second_pokemon"], axis="columns")
+
+
+
   
   return df_combats
 

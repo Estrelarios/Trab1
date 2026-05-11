@@ -60,7 +60,7 @@ def main():
         comando_python = f"python src/worker.py --iteracao {it} {flag_teste}"
 
         p = subprocess.Popen(
-            ["cmd.exe", "/c", comando_python], 
+            ["cmd.exe", "/k", comando_python], 
             creationflags=subprocess.CREATE_NEW_CONSOLE,
             cwd=BASE_DIR # Define o diretório de trabalho como a raiz
         )

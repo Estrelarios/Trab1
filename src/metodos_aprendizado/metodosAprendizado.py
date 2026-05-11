@@ -3,6 +3,9 @@ import joblib as jb
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.naive_bayes import GaussianNB
+from sklearn.ensemble import RandomForestClassifier 
+from sklearn.svm import SVC
+from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 from sklearn.preprocessing import StandardScaler
 import numpy as np
@@ -20,6 +23,9 @@ from processamento.ler_dataset_processado import ler_datasets
 class MetodosAprendizado:
     def __init__(self):
         self.modo_teste = False
+
+        self.modelos = {}
+
 
     def disparar_comando(self, parametros: dict = None, callback=None):
         """
@@ -108,11 +114,16 @@ class MetodosAprendizado:
                 if (Acc > maiorAcc):
                     maiorAcc = Acc
                     melhor_modelo = KNN
+
+                    
                     
 
         print()
         cprint(f"Melhor configuração para o KNN", label="KNN")
         cprint(f"{melhor_modelo.get_params()}", label="KNN")
+
+        # Salvando melhor modelo
+        self.modelos["KNN"] = melhor_modelo
         
         print()
         cprint("Melhor configuração:", label="KNN")
@@ -135,7 +146,7 @@ class MetodosAprendizado:
         
         cprint("Executando a Árvore de decisão...", label="AD")
 
-        # Definido os ranges (reduzido para modo teste)
+        # Definido os ranges
         i_range = range(1,11)
         k_range = range(1,11)
         l_range = range(2,16)
@@ -171,6 +182,8 @@ class MetodosAprendizado:
 
         opiniao = melhor_modelo.predict(x_teste)
         cprint(f"Acurácia sobre o teste: {accuracy_score(y_teste, opiniao)}", label="AD")
+
+        self.modelos["AD"] = melhor_modelo
         
         return accuracy_score(y_teste, opiniao)
     
@@ -186,16 +199,157 @@ class MetodosAprendizado:
 
         cprint(f"Acurácia sobre o teste: {acuracia}", label="NB")
 
+        self.modelos["GNB"] = GNB
         return acuracia
 
     def metodo_svm(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
         cprint("Executando o SVM...", label="SVM")
 
-        cprint(f"Acurácia sobre o teste: {acuracia}", label="NB")
-        pass
+        # Buscar:
+        # ● Tipo de kernel (linear, polinomial, RBF, sigmoid)
+        # ● Parâmetro de regularização (C) (Valor do erro)
+
+        kernels = ['linear'] if self.modo_teste else ['linear', 'poly', 'rbf', 'sigmoid']
+
+        # Valores comuns para C em escala logarítimica, revisar
+        c_range = [1] if self.modo_teste else [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 5, 10, 50, 100, 500,1000]   
+
+        maior = -1
+
+        for kernel in tqdm(kernels, ascii=True, leave=False): # itera buscando o melhor kernel
+            for C in tqdm(c_range, ascii=True): # itera buscando o melhor C para o kernel atual
+                cprint(f"Testando kernel='{kernel}', C={C}...", label="SVM")
+                SVM = SVC(kernel=kernel, C=C)
+                SVM.fit(x_treino, y_treino) # treina
+                opiniao = SVM.predict(x_val) # testa
+                acuracia = accuracy_score(y_val, opiniao) # valida
+
+                # Se o modelo foi melhor do que o melhor até agora, salva ele
+                if acuracia > maior:
+                    
+                    cprint(f"Kernel: {kernel}, Acurácia sobre o teste: {acuracia}", label="SVM")
+                    maior = acuracia
+                    melhor_modelo = SVM
+
+        # Salva na classe o melhor modelo encontrado
+        self.modelos["SVM"] = melhor_modelo
+
+        # Retorna o melhor resultado encontrado
+        return maior
 
     def metodo_randomForest(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
         cprint("Executando a Random Forest...", label="RF")
-        pass
+
+        # ● Número de estimadores 
+        # ● Critério de seleção dos atributos 
+        # ● Profundidade máxima 
+        # ● Número mínimo para realizar a divisão do nó 
+        # ● Número mínimo de elementos por folha
+
+        i_range = range(10,100,5)
+
+        if self.modo_teste:
+            i_range = range(10,20,5)
+
+        if self.modelos.get("AD") is None:
+            cprint("Executando a Árvore de decisão para obter os melhores hiperparâmetros...", label="RF")
+            self.metodo_arvoreDecisao(x_treino, y_treino, x_teste, y_teste, x_val, y_val)
+        modelo = self.modelos["AD"]
+
+        melhor_modelo = modelo
+        maior = -1
+
+        for i in tqdm(i_range, ascii=True, desc=f"[ RF ] n_estimators =  "):      #n_estimators
+            RandomForest = RandomForestClassifier(n_estimators=i, criterion=modelo.criterion, max_depth=modelo.max_depth, min_samples_split=modelo.min_samples_split, min_samples_leaf=modelo.min_samples_leaf)
+            RandomForest.fit(x_treino, y_treino)
+            opiniao = RandomForest.predict(x_val)
+            acuracia = accuracy_score(y_val, opiniao)
+
+            if acuracia > maior:
+                melhor_modelo = RandomForest
+                
+                cprint(f"Acurácia sobre o teste melhorou: {acuracia} > {maior}", label="RF")
+                maior = acuracia
+
+        cprint(f"Acurácia sobre o teste: {maior}", label="RF")
+
+        self.modelos["RF"] = melhor_modelo
+
+        return maior
+
+
+    def metodo_mlp(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
+
+        cprint("Executando o Multi-Layer Perceptron...", label="MLP")
+        
+        # Buscar:
+        # ● Número de épocas de treino
+        # ● Taxa de aprendizagem
+        # ● Número de camadas escondidas
+        # ● Quantidade de neurônios em cada camada escondida
+        # ● Função de ativação
+        # ● Tamanho do batch
+
+        # Definido os ranges
+        epocas_range = range(1,15)
+        lr_range = [0.0001, 0.001, 0.01, 0.1] # Learning rate
+        num_camadas_escondidas_range = [1,2] # Mais que 2 é dar overclock no mouse
+        neuronios_por_camada_range = range(2, 44) # Deve estar entre o numero de neuronios de entrada e o de saida
+        funcao_ativacao_range = ['relu', 'tanh', 'logistic'] # logistic é bom pra classificação binaria
+        tamanho_batch_range = [32, 64, 128, 256]
+
+        # Altera os ranges caso modo teste
+        if self.modo_teste:
+            epocas_range = range(1,5)
+            lr_range = [0.1] # Learning rate
+            num_camadas_escondidas_range = [1] # Mais que 2 é dar overclock no mouse
+            neuronios_por_camada_range = range(1,10) # Deve estar entre o numero de neuronios de entrada e o de saida
+            funcao_ativacao_range = ['logistic'] # logistic é bom pra classificação binaria
+            tamanho_batch_range = [64]
+
+        cprint("Fazendo busca de hiperparametros...", label="MLP")
+
+        maior = -1
+        for epoca in tqdm(epocas_range, ascii=True, desc="[ MLP ] epocas"):
+            for taxa_aprendizado in lr_range:
+                for num_camadas in num_camadas_escondidas_range:
+                    for num_neuronios_1 in neuronios_por_camada_range:
+                        camadas_iter = neuronios_por_camada_range if num_camadas == 2 else [None]
+                        for num_neuronios_2 in camadas_iter:
+                            config_camadas = (num_neuronios_1,) if num_camadas == 1 else (num_neuronios_1, num_neuronios_2)
+                            for func_ativacao in funcao_ativacao_range:
+                                for tamanho_batch in tamanho_batch_range:
+
+                                    MLP = MLPClassifier(
+                                        max_iter=epoca,
+                                        batch_size=tamanho_batch,
+                                        hidden_layer_sizes=config_camadas,
+                                        learning_rate_init=taxa_aprendizado,
+                                        activation=func_ativacao
+                                    )
+                                                    
+                                MLP.fit(x_treino,y_treino)
+                                opiniao = MLP.predict(x_val)
+                                Acc = accuracy_score(y_val, opiniao)
+                                # print("Criterion: ",j," max_depth: ",i," min_samples_leaf: ",k," min_samples_split: ",l," splitter: ",m," Acc: ",Acc)
+                                if (Acc > maior):
+                                    #cprint(f"Nova melhor configuração encontrada: {Acc}", label="AD")
+                                    maior = Acc
+                                    melhor_modelo = MLP
+
+        cprint("\nMelhor configuração para a MLP", label="MLP")
+        # cprint(f"Criterion: {melhor_modelo.}, max_depth: {melhor_modelo.max_depth}, min_samples_leaf: {melhor_modelo.min_samples_leaf}, min_samples_split: {melhor_modelo.min_samples_split}, splitter: {melhor_modelo.splitter}, Acc: {maior}", label="MLP")
+
+        # Salvando melhor modelo
+        self.modelos["MLP"] = melhor_modelo
+
+        """Aplicando a melhor configuração sobre o **Conjunto de Teste**"""
+
+        opiniao = melhor_modelo.predict(x_teste)
+
+        acuracia = accuracy_score(y_teste, opiniao)
+        cprint(f"Acurácia sobre o teste: {acuracia}", label="MLP")
+        
+        return acuracia
 
 

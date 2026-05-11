@@ -26,7 +26,7 @@ def log_error(iteracao, error_msg):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     log_path = os.path.join(log_dir, f"worker_it{iteracao}_error.log")
     
-    with open(log_path, "a", encoding="utf-8") as f:
+    with open(log_path, "w", encoding="utf-8") as f:
         f.write(f"--- Erro na Iteração {iteracao} em {timestamp} ---\n")
         f.write(error_msg)
         f.write("\n" + "="*50 + "\n\n")
@@ -93,8 +93,9 @@ def main():
     except Exception:
         error_msg = traceback.format_exc()
         cprint(f"ERRO FATAL na Iteração {args.iteracao}! Verifique logs/", label=f"ERR {args.iteracao}")
-        time.sleep(10)
+        
         log_error(args.iteracao, error_msg)
+        time.sleep(10)
         
 
 if __name__ == "__main__":
