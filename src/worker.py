@@ -83,10 +83,12 @@ def main():
         caminho_csv = os.path.join(resultados_dir, nome_arquivo)
         
         safe_save(df_result, caminho_csv)
-
-        time.sleep(10)
         
         cprint(f"Iteração {args.iteracao} finalizada com sucesso!", label=f"CLT {args.iteracao}")
+
+        esperar = 10
+        cprint(f"Fechando em {esperar}s")
+        time.sleep(esperar)
 
     except Exception:
         error_msg = traceback.format_exc()

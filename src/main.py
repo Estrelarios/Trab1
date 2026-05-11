@@ -53,14 +53,14 @@ def main():
             processos_ativos = [p for p in processos_ativos if p.poll() is None]
             time.sleep(1)
 
-        cprint(f"Abrindo terminal para Iteração {it}...", label="ORQUESTRADOR")
+        cprint(f"Abrindo terminal para Iteração {it}...", label="CHEFE")
 
         flag_teste = "--teste" if args.teste else ""
         # Chamada usando o caminho relativo à raiz do projeto
         comando_python = f"python src/worker.py --iteracao {it} {flag_teste}"
 
         p = subprocess.Popen(
-            ["cmd.exe", "/k", comando_python], 
+            ["cmd.exe", "/c", comando_python], 
             creationflags=subprocess.CREATE_NEW_CONSOLE,
             cwd=BASE_DIR # Define o diretório de trabalho como a raiz
         )
