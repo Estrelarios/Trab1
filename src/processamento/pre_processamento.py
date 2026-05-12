@@ -1,4 +1,10 @@
 import pandas as pd
+import os
+import sys
+
+# Adiciona o diretório 'src' ao sys.path para permitir imports relativos a ele
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from processamento.ler_dataset_processado import ler_datasets
 from utils.print_customizado import cprint
 from time import sleep
@@ -94,6 +100,26 @@ def pre_processar_dataset_combats(df_combats, df_pokemon):
   return df_combats
 
 
+def reduzir_dataset(df, n_amostras=5000):
+  """Reduz o dataset para um tamanho menor mantendo a proporção das classes (Winner)
+  """
+  from sklearn.model_selection import train_test_split
+  
+  cprint(f"Reduzindo dataset para {n_amostras} amostras (Estratificado)...")
+  
+  # Stratify garante que a proporção de vitórias (0 e 1) seja mantida
+  df_reduzido, _ = train_test_split(
+      df, 
+      train_size=n_amostras, 
+      stratify=df['Winner'], 
+      random_state=42 # Seed fixa para consistência entre execuções de pré-processamento
+  )
+
+  cprint(f"Redução concluida!")
+  
+  return df_reduzido
+
+
 def pre_processar_dados():
   
   df_combats, df_pokemon = ler_datasets()
@@ -101,6 +127,9 @@ def pre_processar_dados():
   df_pokemon_proc = pre_processar_dataset_pokemon(df_pokemon)
 
   df_combats_proc = pre_processar_dataset_combats(df_combats, df_pokemon_proc)
+
+  # Reduzir para 5k batalhas conforme decisão científica
+  df_combats_proc = reduzir_dataset(df_combats_proc, n_amostras=5000)
 
   # Salva o dataset processado
   df_combats_proc.to_csv("datasets_processados/dados.csv", index=False)
