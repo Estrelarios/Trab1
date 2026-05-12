@@ -46,11 +46,15 @@ def main():
         cprint("Todas as iterações já foram concluídas!", label="CHEFE")
         return
 
-    processos_ativos = []
+    processos_ativos = [] # Lista de tuplas (processo, iteracao)
 
     for it in pendentes:
         while len(processos_ativos) >= limite_janelas:
-            processos_ativos = [p for p in processos_ativos if p.poll() is None]
+            # Verifica processos que terminaram
+            for p, i in processos_ativos[:]:
+                if p.poll() is not None:
+                    cprint(f"Iteração {i} Finalizada!", label="CHEFE")
+                    processos_ativos.remove((p, i))
             time.sleep(1)
 
         cprint(f"Abrindo terminal para Iteração {it}...", label="CHEFE")
@@ -64,9 +68,17 @@ def main():
             creationflags=subprocess.CREATE_NEW_CONSOLE,
             cwd=BASE_DIR # Define o diretório de trabalho como a raiz
         )
-        processos_ativos.append(p)
+        processos_ativos.append((p, it))
 
-    cprint("Todas as iterações pendentes foram disparadas.", label="CHEFE")
+    # Espera os últimos processos terminarem
+    while processos_ativos:
+        for p, i in processos_ativos[:]:
+            if p.poll() is not None:
+                cprint(f"Iteração {i} Finalizada!", label="CHEFE")
+                processos_ativos.remove((p, i))
+        time.sleep(1)
+
+    cprint("Todas as iterações pendentes foram disparadas e concluídas.", label="CHEFE")
 
 if __name__ == "__main__":
     main()

@@ -63,7 +63,7 @@ class MetodosAprendizado:
         
         return resultados
     
-    def split_dataset(self, dados : DataFrame, tam_treino=0.5, tam_teste=0.25, tam_validacao=0.25):
+    def split_dataset(self, dados : DataFrame, tam_treino=0.5, tam_teste=0.25, tam_validacao=0.25, seed=None):
         """Aplica o train_test_split duas vezes para dividir os dados em treino (50%), teste (25%) e validação (25%)
 
         Args:
@@ -84,9 +84,9 @@ class MetodosAprendizado:
         X = dados.iloc[:,1:]
         Y = dados.iloc[:,0]
         
-        x_treino, x_temp, y_treino, y_temp = train_test_split(X, Y, train_size=tam_treino, test_size=1-tam_treino)
+        x_treino, x_temp, y_treino, y_temp = train_test_split(X, Y, train_size=tam_treino, test_size=1-tam_treino, random_state=seed)
 
-        x_teste, x_val, y_teste, y_val = train_test_split(x_temp, y_temp, train_size=tam_teste, test_size=tam_validacao)
+        x_teste, x_val, y_teste, y_val = train_test_split(x_temp, y_temp, train_size=tam_teste, test_size=tam_validacao, random_state=seed)
 
         return x_treino, y_treino, x_teste, y_teste, x_val, y_val
 

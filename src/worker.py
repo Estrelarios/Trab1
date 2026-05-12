@@ -53,6 +53,7 @@ def main():
 
         # Carga de dados (o loader já deve lidar com caminhos internos)
         dados = ler_datasets("dados")
+
         
         if args.teste:
             dados = dados.sample(1000)
@@ -60,7 +61,7 @@ def main():
         ma = MetodosAprendizado()
         ma.modo_teste = args.teste
         
-        x_treino, y_treino, x_teste, y_teste, x_val, y_val = ma.split_dataset(dados)
+        x_treino, y_treino, x_teste, y_teste, x_val, y_val = ma.split_dataset(dados, seed=int(args.iteracao))
         
         resultados = ma.disparar_comando(parametros={
             "x_treino": x_treino, "y_treino": y_treino,
@@ -70,7 +71,7 @@ def main():
         })
 
         # Formatação do Resultado
-        linha = {"iteracao": args.iteracao}
+        linha = {"iteracao/seed": args.iteracao}
         linha.update(resultados)
         df_result = pd.DataFrame([linha])
 
