@@ -126,6 +126,8 @@ class MetodosAprendizado:
         cprint(f"Acurácia sobre o teste: {acuracia_teste}", label="KNN")
 
         return acuracia_teste
+    
+
     def metodo_arvoreDecisao(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
         
         cprint("Executando a Árvore de decisão...", label="AD")
@@ -289,32 +291,33 @@ class MetodosAprendizado:
         # Definido os ranges
         epocas_range = [30, 50, 100, 200, 500]
         lr_range = [0.0001, 0.001, 0.01, 0.1] # Learning rate
-        num_camadas_escondidas_range = [1,2] # Mais que 2 é dar overclock no mouse
-        neuronios_por_camada_range = range(2, 44) # Deve estar entre o numero de neuronios de entrada e o de saida
+        num_camadas_escondidas_range = [2] # Mais que 2 é dar overclock no mouse
+        neuronios_por_camada_range = [44,55,66,77,88] # Deve estar entre o numero de atributos e o seu dobro
         funcao_ativacao_range = ['relu', 'tanh', 'logistic'] # logistic é bom pra classificação binaria
         tamanho_batch_range = [32, 64, 128, 256]
 
         # Altera os ranges caso modo teste
         if self.modo_teste:
-            epocas_range = range(100, 200, 100) # testa só 100 epocas
+            epocas_range = [100] # testa só 100 epocas
             lr_range = [0.1] # Learning rate
             num_camadas_escondidas_range = [1] # Mais que 2 é dar overclock no mouse
-            neuronios_por_camada_range = range(1,10) # Deve estar entre o numero de neuronios de entrada e o de saida
+            neuronios_por_camada_range = [4] # Deve estar entre o numero de neuronios de entrada e o de saida
             funcao_ativacao_range = ['logistic'] # logistic é bom pra classificação binaria
-            tamanho_batch_range = [64]
+            tamanho_batch_range = [256]
 
         cprint("Fazendo busca de hiperparametros...", label="MLP")
 
         maior = -1
-        for epoca in tqdm(epocas_range, ascii=True, desc="[ MLP ] epocas"):
-            for taxa_aprendizado in lr_range:
-                for num_camadas in num_camadas_escondidas_range:
-                    for num_neuronios_1 in neuronios_por_camada_range:
-                        camadas_iter = neuronios_por_camada_range if num_camadas == 2 else [None]
-                        for num_neuronios_2 in camadas_iter:
-                            config_camadas = (num_neuronios_1,) if num_camadas == 1 else (num_neuronios_1, num_neuronios_2)
-                            for func_ativacao in funcao_ativacao_range:
-                                for tamanho_batch in tamanho_batch_range:
+        for epoca in tqdm(epocas_range, ascii=True, leave=False):
+            for tamanho_batch in tqdm(tamanho_batch_range, ascii=True):
+                for taxa_aprendizado in lr_range:
+                    for num_camadas in num_camadas_escondidas_range:
+                        for num_neuronios_1 in neuronios_por_camada_range:
+                            camadas_iter = neuronios_por_camada_range if num_camadas == 2 else [None]
+                            for num_neuronios_2 in camadas_iter:
+                                config_camadas = (num_neuronios_1,) if num_camadas == 1 else (num_neuronios_1, num_neuronios_2)
+                                for func_ativacao in funcao_ativacao_range:
+                                
 
                                     MLP = MLPClassifier(
                                         max_iter=epoca,
