@@ -4,6 +4,7 @@ import os
 import time
 import traceback
 import sys
+import joblib as jb
 from datetime import datetime
 
 # Adiciona a pasta src ao path para permitir imports internos
@@ -31,7 +32,7 @@ def log_error(iteracao, error_msg):
         f.write(error_msg)
         f.write("\n" + "="*50 + "\n\n")
 
-def safe_save(df, caminho):
+def salvar_resultados(df, caminho):
     """Tenta salvar os resultados no CSV com retry para evitar conflitos de escrita."""
     while True:
         try:
@@ -41,6 +42,22 @@ def safe_save(df, caminho):
         except PermissionError:
             print(f"O arquivo {caminho} está ocupado. Tentando novamente em 1s...")
             time.sleep(1)
+
+def salvar_modelos(modelos : dict, iteracao):
+
+    chaves : dict[str] = modelos.keys()
+
+    for chave in chaves:
+
+        nome_modelo = chave.removeprefix("metodo_")
+
+        nome_arquivo = f"{iteracao:02}_{nome_modelo}.joblib"
+
+        caminho_salvamento = "modelos/" + nome_arquivo
+
+        jb.dump(modelos[chave], caminho_salvamento)
+
+
 
 def main():
     parser = argparse.ArgumentParser(description="Worker de processamento de uma única iteração.")
@@ -63,7 +80,7 @@ def main():
         
         x_treino, y_treino, x_teste, y_teste, x_val, y_val = ma.split_dataset(dados, seed=int(args.iteracao))
         
-        resultados = ma.disparar_comando(parametros={
+        resultados, modelos = ma.disparar_comando(parametros={
             "x_treino": x_treino, "y_treino": y_treino,
             "x_teste":  x_teste,  "y_teste":  y_teste,
             "x_val":    x_val,    "y_val":    y_val,
@@ -83,7 +100,14 @@ def main():
             
         caminho_csv = os.path.join(resultados_dir, nome_arquivo)
         
-        safe_save(df_result, caminho_csv)
+        salvar_resultados(df_result, caminho_csv)
+
+        cprint("Salvando modelos", label=f"CLT {args.iteracao}")
+
+        if not args.teste:
+            salvar_modelos(modelos, args.iteracao)
+
+        cprint("Modelos salvos!", label=f"CLT {args.iteracao}")
         
         cprint(f"Iteração {args.iteracao} finalizada com sucesso!", label=f"CLT {args.iteracao}")
 

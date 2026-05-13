@@ -1,5 +1,4 @@
-import sklearn as sk
-import joblib as jb
+import sklearn
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.naive_bayes import GaussianNB
@@ -8,14 +7,16 @@ from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 from sklearn.preprocessing import StandardScaler
-import numpy as np
 from tqdm import tqdm
 from pandas import DataFrame
 from sklearn.model_selection import train_test_split, RandomizedSearchCV
 import inspect
+
 from processamento.pre_processamento import pre_processar_dados
 from utils.print_customizado import cprint
 from processamento.ler_dataset_processado import ler_datasets
+
+from warnings import filterwarnings; filterwarnings("ignore", category="ConvergenceWarning") # Filtra os warnings do MLP
 
 
 
@@ -41,6 +42,7 @@ class MetodosAprendizado:
             self.modo_teste = True
         
         resultados = {}
+        modelos = {}
         metodos = [m for m in dir(self) if m.startswith("metodo") and callable(getattr(self, m))]
         
         for nome_metodo in metodos:
@@ -57,11 +59,11 @@ class MetodosAprendizado:
             kwargs = {p: parametros[p] for p in params_necessarios if p in parametros}
             
             if callback and "callback" in assinatura.parameters:
-                resultados[nome_metodo] = metodo(**kwargs, callback=callback)
+                resultados[nome_metodo], modelos[nome_metodo] = metodo(**kwargs, callback=callback)
             else:
-                resultados[nome_metodo] = metodo(**kwargs)
+                resultados[nome_metodo], modelos[nome_metodo] = metodo(**kwargs)
         
-        return resultados
+        return resultados, modelos
     
     def split_dataset(self, dados : DataFrame, tam_treino=0.5, tam_teste=0.25, tam_validacao=0.25, seed=None):
         """Aplica o train_test_split duas vezes para dividir os dados em treino (50%), teste (25%) e validação (25%)
@@ -115,8 +117,6 @@ class MetodosAprendizado:
         cprint(f"Melhor configuração encontrada na validação:", label="KNN")
         cprint(f"K: {melhor_modelo.n_neighbors} , Weights: {melhor_modelo.weights}, Acc: {maiorAcc}", label="KNN")
 
-        # Salvando melhor modelo
-        self.modelos["KNN"] = melhor_modelo
         
         """**Aplicando o melhor modelo sobre o conjunto de teste**"""
 
@@ -125,7 +125,7 @@ class MetodosAprendizado:
 
         cprint(f"Acurácia sobre o teste: {acuracia_teste}", label="KNN")
 
-        return acuracia_teste
+        return acuracia_teste, melhor_modelo
     
 
     def metodo_arvoreDecisao(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
@@ -169,29 +169,26 @@ class MetodosAprendizado:
         opiniao = melhor_modelo.predict(x_teste)
         acuracia = accuracy_score(y_teste, opiniao)
         cprint(f"Acurácia sobre o teste: {acuracia}", label="AD")
-
-        self.modelos["AD"] = melhor_modelo
         
-        return acuracia
+        return acuracia, melhor_modelo
     
     def metodo_naiveBayes(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
         cprint("Executando o Naive Bayes...", label="NB")
 
-        GNB = GaussianNB()
-        GNB.fit(x_treino, y_treino)
+        melhor_modelo = GaussianNB()
+        melhor_modelo.fit(x_treino, y_treino)
 
         # Validação (embora GNB não tenha muitos hiperparâmetros, seguimos o padrão)
-        opiniao_val = GNB.predict(x_val)
+        opiniao_val = melhor_modelo.predict(x_val)
         acuracia_val = accuracy_score(y_val, opiniao_val)
         cprint(f"Acurácia sobre a validação: {acuracia_val}", label="NB")
 
         # Teste
-        opiniao_teste = GNB.predict(x_teste)
+        opiniao_teste = melhor_modelo.predict(x_teste)
         acuracia_teste = accuracy_score(y_teste, opiniao_teste)
         cprint(f"Acurácia sobre o teste: {acuracia_teste}", label="NB")
 
-        self.modelos["GNB"] = GNB
-        return acuracia_teste
+        return acuracia_teste, melhor_modelo
 
     def metodo_svm(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
         cprint("Executando o SVM...", label="SVM")
@@ -230,7 +227,7 @@ class MetodosAprendizado:
         cprint(f"Acurácia sobre o teste: {acuracia_teste}", label="SVM")
 
         # Retorna o melhor resultado encontrado no teste
-        return acuracia_teste
+        return acuracia_teste, melhor_modelo
 
     def metodo_randomForest(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
         cprint("Executando a Random Forest...", label="RF")
@@ -273,7 +270,7 @@ class MetodosAprendizado:
         acuracia_teste = accuracy_score(y_teste, opiniao_teste)
         cprint(f"Acurácia sobre o teste: {acuracia_teste}", label="RF")
 
-        return acuracia_teste
+        return acuracia_teste, melhor_modelo
 
 
     def metodo_mlp(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
@@ -349,7 +346,7 @@ class MetodosAprendizado:
         acuracia = accuracy_score(y_teste, opiniao)
         cprint(f"Acurácia sobre o teste: {acuracia}", label="MLP")
         
-        return acuracia
+        return acuracia, melhor_modelo
 
 
 
