@@ -7,19 +7,17 @@ from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split, RandomizedSearchCV
+
 from tqdm import tqdm
 from pandas import DataFrame
-from sklearn.model_selection import train_test_split, RandomizedSearchCV
 import inspect
+from warnings import filterwarnings
+filterwarnings("ignore", category="ConvergenceWarning") # Filtra os warnings do MLP
 
 from processamento.pre_processamento import pre_processar_dados
 from utils.print_customizado import cprint
 from processamento.ler_dataset_processado import ler_datasets
-
-from warnings import filterwarnings; filterwarnings("ignore", category="ConvergenceWarning") # Filtra os warnings do MLP
-
-
-
 
 class MetodosAprendizado:
     def __init__(self):
@@ -280,7 +278,6 @@ class MetodosAprendizado:
         # Buscar:
         # ● Número de épocas de treino
         # ● Taxa de aprendizagem
-        # ● Número de camadas escondidas
         # ● Quantidade de neurônios em cada camada escondida
         # ● Função de ativação
         # ● Tamanho do batch
@@ -288,7 +285,6 @@ class MetodosAprendizado:
         # Definido os ranges
         epocas_range = [30, 50, 100, 200, 500]
         lr_range = [0.0001, 0.001, 0.01, 0.1] # Learning rate
-        num_camadas_escondidas_range = [2] # Mais que 2 é dar overclock no mouse
         neuronios_por_camada_range = [44,55,66,77,88] # Deve estar entre o numero de atributos e o seu dobro
         funcao_ativacao_range = ['relu', 'tanh', 'logistic'] # logistic é bom pra classificação binaria
         tamanho_batch_range = [32, 64, 128, 256]
@@ -308,30 +304,26 @@ class MetodosAprendizado:
         for epoca in tqdm(epocas_range, ascii=True, leave=False):
             for tamanho_batch in tqdm(tamanho_batch_range, ascii=True):
                 for taxa_aprendizado in lr_range:
-                    for num_camadas in num_camadas_escondidas_range:
-                        for num_neuronios_1 in neuronios_por_camada_range:
-                            camadas_iter = neuronios_por_camada_range if num_camadas == 2 else [None]
-                            for num_neuronios_2 in camadas_iter:
-                                config_camadas = (num_neuronios_1,) if num_camadas == 1 else (num_neuronios_1, num_neuronios_2)
-                                for func_ativacao in funcao_ativacao_range:
-                                
+                    for num_neuronios in neuronios_por_camada_range:
+                        for func_ativacao in funcao_ativacao_range:
+                            
 
-                                    MLP = MLPClassifier(
-                                        max_iter=epoca,
-                                        batch_size=tamanho_batch,
-                                        hidden_layer_sizes=config_camadas,
-                                        learning_rate_init=taxa_aprendizado,
-                                        activation=func_ativacao
-                                    )
-                                                    
-                                    MLP.fit(x_treino,y_treino)
-                                    opiniao = MLP.predict(x_val)
-                                    Acc = accuracy_score(y_val, opiniao)
-                                    # print("Criterion: ",j," max_depth: ",i," min_samples_leaf: ",k," min_samples_split: ",l," splitter: ",m," Acc: ",Acc)
-                                    if (Acc > maior):
-                                        #cprint(f"Nova melhor configuração encontrada: {Acc}", label="AD")
-                                        maior = Acc
-                                        melhor_modelo = MLP
+                            MLP = MLPClassifier(
+                                max_iter=epoca,
+                                batch_size=tamanho_batch,
+                                hidden_layer_sizes=(num_neuronios,),
+                                learning_rate_init=taxa_aprendizado,
+                                activation=func_ativacao
+                            )
+                                            
+                            MLP.fit(x_treino,y_treino)
+                            opiniao = MLP.predict(x_val)
+                            Acc = accuracy_score(y_val, opiniao)
+                            # print("Criterion: ",j," max_depth: ",i," min_samples_leaf: ",k," min_samples_split: ",l," splitter: ",m," Acc: ",Acc)
+                            if (Acc > maior):
+                                #cprint(f"Nova melhor configuração encontrada: {Acc}", label="AD")
+                                maior = Acc
+                                melhor_modelo = MLP
 
         cprint("\nMelhor configuração para a MLP", label="MLP")
         # cprint(f"Criterion: {melhor_modelo.}, max_depth: {melhor_modelo.max_depth}, min_samples_leaf: {melhor_modelo.min_samples_leaf}, min_samples_split: {melhor_modelo.min_samples_split}, splitter: {melhor_modelo.splitter}, Acc: {maior}", label="MLP")
