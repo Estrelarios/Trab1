@@ -33,8 +33,8 @@ def main():
     if os.path.exists(caminho_csv):
         try:
             df = pd.read_csv(caminho_csv)
-            if 'iteracao' in df.columns:
-                concluidas = df['iteracao'].tolist()
+            if 'iteracao/seed' in df.columns:
+                concluidas = df['iteracao/seed'].tolist()
         except Exception:
             pass
 
