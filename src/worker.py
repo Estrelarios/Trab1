@@ -43,7 +43,7 @@ def salvar_resultados(df, caminho):
             print(f"O arquivo {caminho} está ocupado. Tentando novamente em 1s...")
             time.sleep(1)
 
-def salvar_modelos(modelos : dict, iteracao):
+def salvar_modelos(modelos : dict, iteracao, teste):
 
     chaves : dict[str] = modelos.keys()
 
@@ -53,7 +53,9 @@ def salvar_modelos(modelos : dict, iteracao):
 
         nome_arquivo = f"{iteracao:02}_{nome_modelo}.joblib"
 
-        caminho_salvamento = "modelos/" + nome_arquivo
+        dir_salvamento = "modelos/teste/" if teste else "modelos/"
+
+        caminho_salvamento = dir_salvamento + nome_arquivo
 
         jb.dump(modelos[chave], caminho_salvamento)
 
@@ -71,7 +73,6 @@ def main():
         # Carga de dados (o loader já deve lidar com caminhos internos)
         dados = ler_datasets("dados")
 
-        
         if args.teste:
             dados = dados.sample(1000)
 
@@ -104,8 +105,7 @@ def main():
 
         cprint("Salvando modelos", label=f"CLT {args.iteracao}")
 
-        if not args.teste:
-            salvar_modelos(modelos, args.iteracao)
+        salvar_modelos(modelos, args.iteracao, args.teste)
 
         cprint("Modelos salvos!", label=f"CLT {args.iteracao}")
         
