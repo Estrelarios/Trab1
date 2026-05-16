@@ -44,6 +44,13 @@ def salvar_resultados(df, caminho):
             time.sleep(1)
 
 def salvar_modelos(modelos : dict, iteracao, teste):
+    """Salva os modelos gerados a partir da iteração
+
+    Args:
+        modelos (dict): Dicionário onde cada chave é a string "metodo_<tecnicaAM>" e cada valor é a classe que contém o modelo treinado
+        iteracao (int): Número da iteração (seed) o em que o modelo foi criado
+        teste (bool): Se True, salva os modelos em uma pasta diferente para não perder os antigos.
+    """
 
     chaves : dict[str] = modelos.keys()
 
@@ -65,7 +72,19 @@ def main():
     parser = argparse.ArgumentParser(description="Worker de processamento de uma única iteração.")
     parser.add_argument("--iteracao", type=int, required=True, help="Número da iteração atual.")
     parser.add_argument("--teste", action="store_true", help="Ativa o modo de teste.")
+    parser.add_argument("--arquivo", type=str, help="Nome do arquivo de resultados.")
     args = parser.parse_args()
+
+    # --- CONFIGURAÇÃO MANUAL DE TÉCNICAS ---
+    # Adicione ou remova os métodos que deseja executar nesta rodada.
+    # Exemplos: "metodo_knn", "metodo_arvoreDecisao", "metodo_naiveBayes", "metodo_svm", "metodo_mlp",
+    #           "metodo_randomForest", "metodo_bagging", "metodo_boosting", 
+    #           "metodo_combSoma", "metodo_combProduto", "metodo_combBordaCount"
+    
+    TECNICAS_PARA_RODAR = [
+        "metodo_randomForest"
+    ]
+    # ---------------------------------------
 
     try:
         cprint(f"Iniciando Iteração {args.iteracao}...", label=f"CLT {args.iteracao}")
@@ -81,20 +100,48 @@ def main():
         
         x_treino, y_treino, x_teste, y_teste, x_val, y_val = ma.split_dataset(dados, seed=int(args.iteracao))
         
-        resultados, modelos = ma.disparar_comando(parametros={
-            "x_treino": x_treino, "y_treino": y_treino,
-            "x_teste":  x_teste,  "y_teste":  y_teste,
-            "x_val":    x_val,    "y_val":    y_val,
-            "modo_teste": args.teste
-        })
+        # Verifica se precisa carregar modelos (se houver métodos de combinação ou RF na lista)
+        modelos_carregados = None
+        metodos_que_precisam_de_carga = [
+            "metodo_combSoma", 
+            "metodo_combProduto", 
+            "metodo_combBordaCount", 
+            "metodo_randomForest"
+        ]
+        
+        # Só carrega se o método estiver na lista para rodar
+        if any(m in TECNICAS_PARA_RODAR for m in metodos_que_precisam_de_carga):
+            # Se for RF, só precisa carregar se a AD não for rodar agora (pois a AD em memória é preferível)
+            precisa_carregar = True
+            if "metodo_randomForest" in TECNICAS_PARA_RODAR and "metodo_arvoreDecisao" in TECNICAS_PARA_RODAR:
+                # Se ambos estão na lista, o RF usará o self.modelo_AD gerado na hora
+                # Mas se houver outros métodos de combinação, ainda precisa carregar.
+                outros_comb = [m for m in metodos_que_precisam_de_carga if m != "metodo_randomForest"]
+                if not any(m in TECNICAS_PARA_RODAR for m in outros_comb):
+                    precisa_carregar = False
+            
+            if precisa_carregar:
+                modelos_carregados = ma.carregar_modelos(args.iteracao, args.teste)
+
+        # Dispara os comandos selecionados
+        resultados, modelos = ma.disparar_comando(
+            parametros={
+                "x_treino": x_treino, "y_treino": y_treino,
+                "x_teste":  x_teste,  "y_teste":  y_teste,
+                "x_val":    x_val,    "y_val":    y_val,
+                "modo_teste": args.teste
+            },
+            lista_tecnicas=TECNICAS_PARA_RODAR,
+            modelos_carregados=modelos_carregados
+        )
 
         # Formatação do Resultado
         linha = {"iteracao/seed": args.iteracao}
         linha.update(resultados)
         df_result = pd.DataFrame([linha])
 
-        # Caminho de Salvamento (Sempre na raiz/resultados)
-        nome_arquivo = "resultados_teste.csv" if args.teste else "resultados.csv"
+        # Caminho de Salvamento
+        nome_arquivo = args.arquivo if args.arquivo else ("resultados_teste.csv" if args.teste else "resultados.csv")
         resultados_dir = os.path.join(BASE_DIR, "resultados")
         if not os.path.exists(resultados_dir):
             os.makedirs(resultados_dir)
@@ -103,11 +150,11 @@ def main():
         
         salvar_resultados(df_result, caminho_csv)
 
-        cprint("Salvando modelos", label=f"CLT {args.iteracao}")
-
-        salvar_modelos(modelos, args.iteracao, args.teste)
-
-        cprint("Modelos salvos!", label=f"CLT {args.iteracao}")
+        # Salvamento de modelos (apenas os que foram treinados nesta rodada)
+        if modelos:
+            cprint("Salvando modelos...", label=f"CLT {args.iteracao}")
+            salvar_modelos(modelos, args.iteracao, args.teste)
+            cprint("Modelos salvos!", label=f"CLT {args.iteracao}")
         
         cprint(f"Iteração {args.iteracao} finalizada com sucesso!", label=f"CLT {args.iteracao}")
 

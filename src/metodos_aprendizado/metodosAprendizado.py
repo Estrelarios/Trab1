@@ -2,7 +2,7 @@ import sklearn
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.naive_bayes import GaussianNB
-from sklearn.ensemble import RandomForestClassifier 
+from sklearn.ensemble import RandomForestClassifier, BaggingClassifier
 from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import accuracy_score
@@ -27,43 +27,98 @@ class MetodosAprendizado:
         self.modelo_AD = None
 
 
-    def disparar_comando(self, parametros: dict = None, callback=None):
+    def disparar_comando(self, parametros: dict = None, lista_tecnicas: list = None, modelos_carregados: dict = None):
         """
         Args:
             parametros (dict): Dicionário com todos os parâmetros disponíveis para os métodos.
-            callback (optional): Callback para métodos específicos.
+            lista_tecnicas (list): Lista de strings com os nomes dos métodos a serem executados (ex: ["metodo_knn"]).
+                                  Se None, executa todos os que começam com "metodo_".
+            modelos_carregados (dict): Dicionário de modelos pré-treinados para uso em métodos de combinação.
         """
     
         if parametros is None:
             parametros = {}
 
-        if parametros["modo_teste"]:
+        if "modo_teste" in parametros and parametros["modo_teste"]:
             self.modo_teste = True
         
         resultados = {}
         modelos = {}
-        metodos = [m for m in dir(self) if m.startswith("metodo") and callable(getattr(self, m))]
-        
-        for nome_metodo in metodos:
+
+        # Define quais métodos executar
+        if lista_tecnicas is None:
+            metodos_nomes = [m for m in dir(self) if m.startswith("metodo_") and callable(getattr(self, m))]
+        else:
+            metodos_nomes = lista_tecnicas
+
+        for nome_metodo in metodos_nomes:
+            # Verifica se o metodo exsite na classe
+            if not hasattr(self, nome_metodo):
+                cprint(f"Aviso: Método {nome_metodo} não encontrado na classe.", label="MA")
+                continue
+
             metodo = getattr(self, nome_metodo)
             
             # Descobre quais parâmetros o método precisa (excluindo 'self')
             assinatura = inspect.signature(metodo)
-            params_necessarios = [
-                p for p in assinatura.parameters 
-                if p != "self"
-            ]
+            params_necessarios = list(assinatura.parameters.keys())
             
-            # Extrai do dicionário apenas os parâmetros que o método precisa
-            kwargs = {p: parametros[p] for p in params_necessarios if p in parametros}
+            # Prepara os argumentos para o método
+            kwargs = {}
+            for p in params_necessarios:
+                if p == "self": continue
+                if p == "modelos_carregados":
+                    kwargs[p] = modelos_carregados
+                elif p in parametros:
+                    kwargs[p] = parametros[p]
             
-            if callback and "callback" in assinatura.parameters:
-                resultados[nome_metodo], modelos[nome_metodo] = metodo(**kwargs, callback=callback)
-            else:
-                resultados[nome_metodo], modelos[nome_metodo] = metodo(**kwargs)
+            try:
+                # Chama o método e armazena resultados
+                res, mod = metodo(**kwargs)
+                resultados[nome_metodo] = res
+                modelos[nome_metodo] = mod
+            
+            except Exception as e: 
+                cprint(f"Erro ao executar {nome_metodo}: {str(e)}", label="ERRO")
+                import traceback
+                traceback.print_exc()
         
         return resultados, modelos
     
+    def carregar_modelos(self, iteracao, teste=False):
+        """Carrega todos os modelos .joblib da iteração especificada.
+        
+        Returns:
+            modelos_lidos (dict): { "knn": modelo, "arvoreDecisao": modelo, ... }
+        """
+        import joblib as jb
+        import os
+
+        dir_modelos = "modelos/teste/" if teste else "modelos/"
+        modelos_lidos = {}
+
+        if not os.path.exists(dir_modelos):
+            cprint(f"Diretório de modelos não encontrado: {dir_modelos}", label="MA")
+            return modelos_lidos
+
+        prefixo = f"{iteracao:02}_"
+        arquivos = [f for f in os.listdir(dir_modelos) if f.startswith(prefixo) and f.endswith(".joblib")]
+
+        if not arquivos:
+            cprint(f"Nenhum modelo encontrado para a iteração {iteracao} em {dir_modelos}", label="MA")
+            return modelos_lidos
+
+        cprint(f"Carregando {len(arquivos)} modelos da iteração {iteracao}...", label="MA")
+        for arq in arquivos:
+            nome_tecnica = arq.replace(prefixo, "").replace(".joblib", "")
+            caminho = os.path.join(dir_modelos, arq)
+            try:
+                modelos_lidos[nome_tecnica] = jb.load(caminho)
+            except Exception as e:
+                cprint(f"Falha ao carregar {arq}: {e}", label="MA")
+
+        return modelos_lidos
+
     def split_dataset(self, dados : DataFrame, tam_treino=0.5, tam_teste=0.25, tam_validacao=0.25, seed=None):
         """Aplica o train_test_split duas vezes para dividir os dados em treino (50%), teste (25%) e validação (25%)
 
@@ -142,7 +197,6 @@ class MetodosAprendizado:
 
         return acuracia_teste, melhor_modelo
     
-
     def metodo_arvoreDecisao(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
         
         cprint("Executando a Árvore de decisão...", label="AD")
@@ -258,8 +312,6 @@ class MetodosAprendizado:
 
         # Retorna o melhor resultado encontrado no teste
         return acuracia_teste, melhor_modelo
-
-
 
     def metodo_mlp(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
 
@@ -396,6 +448,22 @@ class MetodosAprendizado:
 
         return acuracia_teste, melhor_modelo
 
+    def metodo_bagging(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
+        # Squeleto para implementação futura
+        pass
 
+    def metodo_boosting(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
+        # Squeleto para implementação futura
+        pass
 
+    def metodo_combSoma(self, x_teste, y_teste, modelos_carregados):
+        # Squeleto para implementação futura
+        pass
 
+    def metodo_combProduto(self, x_teste, y_teste, modelos_carregados):
+        # Squeleto para implementação futura
+        pass
+
+    def metodo_combBordaCount(self, x_teste, y_teste, modelos_carregados):
+        # Squeleto para implementação futura
+        pass
