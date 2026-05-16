@@ -345,27 +345,49 @@ class MetodosAprendizado:
         # ● Profundidade máxima 
         # ● Número mínimo para realizar a divisão do nó 
         # ● Número mínimo de elementos por folha
+        
+        # Definido os ranges
+        est_range = [10, 50, 100]
+        depth_range = range(1, 11)
+        leaf_range = range(1, 11)
+        split_range = range(2, 11)
 
-        i_range = range(10,100,5)
-
+        # Altera os ranges para modo teste
         if self.modo_teste:
-            i_range = range(10,20,5)
+            est_range = [10]
+            depth_range = range(1, 2)
+            leaf_range = range(1, 2)
+            split_range = range(2, 3)
 
-        # Pega o modelo de AD salvo em memoria
-        modelo = self.modelo_AD
+        cprint("Fazendo busca de hiperparametros...", label="RF")
 
-        melhor_modelo = None
         maior = -1
-        for i in tqdm(i_range, ascii=True, desc=f"[ RF ] n_estimators =  "):      #n_estimators
-            RandomForest = RandomForestClassifier(n_estimators=i, criterion=modelo.criterion, max_depth=modelo.max_depth, min_samples_split=modelo.min_samples_split, min_samples_leaf=modelo.min_samples_leaf)
-            RandomForest.fit(x_treino, y_treino)
-            opiniao = RandomForest.predict(x_val)
-            acuracia = accuracy_score(y_val, opiniao)
+        melhor_modelo = None
 
-            if acuracia > maior:
-                melhor_modelo = RandomForest
-                cprint(f"Acurácia sobre a validação melhorou: {acuracia} > {maior}", label="RF")
-                maior = acuracia
+        for criterion in ("entropy", "gini"):
+            for n_estimators in tqdm(est_range, ascii=True, desc=f"[ RF ] criterion = {criterion}"):
+                for max_depth in tqdm(depth_range, desc=f"[ RF ] n_estimators = {n_estimators}", leave=False, ascii=True):
+                    for min_samples_leaf in leaf_range:
+                        for min_samples_split in split_range:
+                            RF = RandomForestClassifier(
+                                n_estimators=n_estimators,
+                                criterion=criterion,
+                                max_depth=max_depth,
+                                min_samples_leaf=min_samples_leaf,
+                                min_samples_split=min_samples_split,
+                                n_jobs=-1,
+                                random_state=42
+                            )
+                            RF.fit(x_treino, y_treino)
+                            opiniao = RF.predict(x_val)
+                            Acc = accuracy_score(y_val, opiniao)
+                            
+                            if (Acc > maior):
+                                maior = Acc
+                                melhor_modelo = RF
+
+        cprint("\nMelhor configuração para a RF", label="RF")
+        cprint(f"Criterion: {melhor_modelo.criterion}, n_estimators: {melhor_modelo.n_estimators}, max_depth: {melhor_modelo.max_depth}, min_samples_leaf: {melhor_modelo.min_samples_leaf}, min_samples_split: {melhor_modelo.min_samples_split}, Acc: {maior}", label="RF")
 
         """Aplicando a melhor configuração sobre o **Conjunto de Teste**"""
         opiniao_teste = melhor_modelo.predict(x_teste)
