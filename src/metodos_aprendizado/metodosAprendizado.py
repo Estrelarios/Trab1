@@ -167,7 +167,7 @@ class MetodosAprendizado:
 
         for j in ("distance", "uniform"):
             for i in tqdm(k_range, desc=f"weights='{j}'"):
-                KNN = KNeighborsClassifier(n_neighbors=i, weights=j, n_jobs=-1)
+                KNN = KNeighborsClassifier(n_neighbors=i, weights=j, n_jobs=3)
                 KNN.fit(x_treino_s, y_treino)
                 opiniao = KNN.predict(x_val_s) # Valida no conjunto de validação
                 Acc = accuracy_score(y_val, opiniao)
@@ -179,7 +179,7 @@ class MetodosAprendizado:
         # Pipeline final
         melhor_modelo = Pipeline([
             ('scaler', StandardScaler()),
-            ('knn', KNeighborsClassifier(n_neighbors=melhor_k, weights=melhor_weights, n_jobs=-1))
+            ('knn', KNeighborsClassifier(n_neighbors=melhor_k, weights=melhor_weights, n_jobs=3))
         ])
         melhor_modelo.fit(x_treino, y_treino)
 
@@ -399,17 +399,17 @@ class MetodosAprendizado:
         # ● Número mínimo de elementos por folha
         
         # Definido os ranges
-        est_range = [10, 50, 100]
-        depth_range = range(1, 11)
-        leaf_range = range(1, 11)
-        split_range = range(2, 11)
+        n_estimadores_range = [10, 50, 100]
+        profundidade_range = range(1, 11)
+        min_divisao_nos_range = range(2, 11)
+        min_elementos_folha_range = range(1, 11)
 
         # Altera os ranges para modo teste
         if self.modo_teste:
-            est_range = [10]
-            depth_range = range(1, 2)
-            leaf_range = range(1, 2)
-            split_range = range(2, 3)
+            n_estimadores_range = [10]
+            profundidade_range = range(1, 2)
+            min_divisao_nos_range = range(2, 3)
+            min_elementos_folha_range = range(1, 2)
 
         cprint("Fazendo busca de hiperparametros...", label="RF")
 
@@ -417,19 +417,19 @@ class MetodosAprendizado:
         melhor_modelo = None
 
         for criterion in ("entropy", "gini"):
-            for n_estimators in tqdm(est_range, ascii=True, desc=f"[ RF ] criterion = {criterion}"):
-                for max_depth in tqdm(depth_range, desc=f"[ RF ] n_estimators = {n_estimators}", leave=False, ascii=True):
-                    for min_samples_leaf in leaf_range:
-                        for min_samples_split in split_range:
+            for n_estimadores in tqdm(n_estimadores_range, ascii=True, desc=f"[ RF ] criterion = {criterion}"):
+                for profundidade in tqdm(profundidade_range, desc=f"[ RF ] n_estimadores = {n_estimadores}", leave=False, ascii=True):
+                    for min_elementos_folha in min_elementos_folha_range:
+                        for min_divisao_nos in min_divisao_nos_range:
                             RF = RandomForestClassifier(
-                                n_estimators=n_estimators,
+                                n_estimators=n_estimadores,
                                 criterion=criterion,
-                                max_depth=max_depth,
-                                min_samples_leaf=min_samples_leaf,
-                                min_samples_split=min_samples_split,
-                                n_jobs=-1,
-                                random_state=42
+                                max_depth=profundidade,
+                                min_samples_leaf=min_elementos_folha,
+                                min_samples_split=min_divisao_nos,
+                                n_jobs=3,
                             )
+
                             RF.fit(x_treino, y_treino)
                             opiniao = RF.predict(x_val)
                             Acc = accuracy_score(y_val, opiniao)
@@ -439,7 +439,7 @@ class MetodosAprendizado:
                                 melhor_modelo = RF
 
         cprint("\nMelhor configuração para a RF", label="RF")
-        cprint(f"Criterion: {melhor_modelo.criterion}, n_estimators: {melhor_modelo.n_estimators}, max_depth: {melhor_modelo.max_depth}, min_samples_leaf: {melhor_modelo.min_samples_leaf}, min_samples_split: {melhor_modelo.min_samples_split}, Acc: {maior}", label="RF")
+        cprint(f"Criterion: {melhor_modelo.criterion}, n_estimadores: {melhor_modelo.n_estimators}, profundidade: {melhor_modelo.max_depth}, min_samples_leaf: {melhor_modelo.min_samples_leaf}, min_samples_split: {melhor_modelo.min_samples_split}, Acc: {maior}", label="RF")
 
         """Aplicando a melhor configuração sobre o **Conjunto de Teste**"""
         opiniao_teste = melhor_modelo.predict(x_teste)
@@ -449,21 +449,46 @@ class MetodosAprendizado:
         return acuracia_teste, melhor_modelo
 
     def metodo_bagging(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
-        # Squeleto para implementação futura
-        pass
+
+        """
+        Lembrar:
+
+        Para escolher os subconjuntos, deve-se fazer seleção aleatorio com reposição:
+            • Um mesmo elemento pode ser escolhido várias vezes
+            para um mesmo conjunto
+            • Um mesmo elemento pode ser escolhido para
+            diferentes subconjuntos
+
+        """
+
+        # Buscar:
+        # ● Número de estimadores
+        # ● Número de amostras para cada subconjunto
+        # ● Estimadores (os classificadores empregados terão seus hiperparâmetros setados com os valores default)
+
+        n_estimadores_range = [50, 100, 500] 
+        n_amostras_range = [0.1, 0.5, 0.7, 1] # Pode ser porcentagem ou inteiro
+        estimador_range = [KNeighborsClassifier, SVC, DecisionTreeClassifier, MLPClassifier, ]
+
+        if self.modo_teste:
+            n_estimadores_range = [50] 
+            n_amostras_range = [0.1] # Pode ser porcentagem ou inteiro
+            estimador_range = [] # Puxar modelos salvos
+
+        BaggingClassifier()
 
     def metodo_boosting(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
-        # Squeleto para implementação futura
+        
         pass
 
     def metodo_combSoma(self, x_teste, y_teste, modelos_carregados):
-        # Squeleto para implementação futura
+        
         pass
 
     def metodo_combProduto(self, x_teste, y_teste, modelos_carregados):
-        # Squeleto para implementação futura
+        
         pass
 
     def metodo_combBordaCount(self, x_teste, y_teste, modelos_carregados):
-        # Squeleto para implementação futura
+        
         pass
