@@ -33,38 +33,33 @@ def log_error(iteracao, error_msg):
         f.write("\n" + "="*50 + "\n\n")
 
 def salvar_resultados(df, caminho):
-    """Tenta salvar os resultados no CSV com retry para evitar conflitos de escrita."""
+    """Salva os resultados no CSV garantindo o alinhamento das colunas."""
     while True:
         try:
-            header = not os.path.exists(caminho)
-            df.to_csv(caminho, mode='a', index=False, header=header)
+            if os.path.exists(caminho):
+                # Lê o CSV existente para garantir que as colunas se alinhem
+                df_antigo = pd.read_csv(caminho)
+                # Concatena o novo resultado, alinhando as colunas automaticamente (pandas faz isso)
+                df_novo = pd.concat([df_antigo, df], ignore_index=True)
+                df_novo.to_csv(caminho, index=False)
+            else:
+                df.to_csv(caminho, index=False)
             break 
         except PermissionError:
-            print(f"O arquivo {caminho} está ocupado. Tentando novamente em 1s...")
             time.sleep(1)
 
 def salvar_modelos(modelos : dict, iteracao, teste):
-    """Salva os modelos gerados a partir da iteração
+    """Salva os modelos gerados a partir da iteração"""
 
-    Args:
-        modelos (dict): Dicionário onde cada chave é a string "metodo_<tecnicaAM>" e cada valor é a classe que contém o modelo treinado
-        iteracao (int): Número da iteração (seed) o em que o modelo foi criado
-        teste (bool): Se True, salva os modelos em uma pasta diferente para não perder os antigos.
-    """
+    dir_salvamento = "modelos/teste/" if teste else "modelos/"
+    if not os.path.exists(dir_salvamento):
+        os.makedirs(dir_salvamento)
 
-    chaves : dict[str] = modelos.keys()
-
-    for chave in chaves:
-
+    for chave, modelo in modelos.items():
         nome_modelo = chave.removeprefix("metodo_")
-
         nome_arquivo = f"{iteracao:02}_{nome_modelo}.joblib"
-
-        dir_salvamento = "modelos/teste/" if teste else "modelos/"
-
-        caminho_salvamento = dir_salvamento + nome_arquivo
-
-        jb.dump(modelos[chave], caminho_salvamento)
+        caminho_salvamento = os.path.join(dir_salvamento, nome_arquivo)
+        jb.dump(modelo, caminho_salvamento)
 
 
 
