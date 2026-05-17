@@ -2,7 +2,7 @@ import sklearn
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.naive_bayes import GaussianNB
-from sklearn.ensemble import RandomForestClassifier, BaggingClassifier
+from sklearn.ensemble import RandomForestClassifier, BaggingClassifier, AdaBoostClassifier
 from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import accuracy_score
@@ -430,6 +430,7 @@ class MetodosAprendizado:
                                 n_jobs=3,
                             )
 
+
                             RF.fit(x_treino, y_treino)
                             opiniao = RF.predict(x_val)
                             Acc = accuracy_score(y_val, opiniao)
@@ -461,25 +462,145 @@ class MetodosAprendizado:
 
         """
 
-        # Buscar:
+        cprint("Executando o Bagging...", label="Bagging")
+
+        # Escalonamento prévio para os estimadores que precisam (KNN, SVM, MLP)
+        scaler = StandardScaler()
+        x_treino_s = scaler.fit_transform(x_treino)
+        x_val_s = scaler.transform(x_val)
+        x_teste_s = scaler.transform(x_teste)
+
+        # Buscar
         # ● Número de estimadores
-        # ● Número de amostras para cada subconjunto
+        # ● Número de amostras para cada subconjunto (0.1 0.5 0.7 1.0)
         # ● Estimadores (os classificadores empregados terão seus hiperparâmetros setados com os valores default)
 
         n_estimadores_range = [50, 100, 500] 
-        n_amostras_range = [0.1, 0.5, 0.7, 1] # Pode ser porcentagem ou inteiro
-        estimador_range = [KNeighborsClassifier, SVC, DecisionTreeClassifier, MLPClassifier, ]
+        n_amostras_range = [0.1, 0.5, 0.7, 1.0] 
+        estimador_range = [KNeighborsClassifier, SVC, DecisionTreeClassifier, MLPClassifier, GaussianNB]
 
         if self.modo_teste:
-            n_estimadores_range = [50] 
-            n_amostras_range = [0.1] # Pode ser porcentagem ou inteiro
-            estimador_range = [] # Puxar modelos salvos
+            n_estimadores_range = [1] 
+            n_amostras_range = [0.1] 
+            estimador_range = [KNeighborsClassifier, SVC, DecisionTreeClassifier, MLPClassifier, GaussianNB]
 
-        BaggingClassifier()
+        cprint("Fazendo busca de hiperparametros...", label="Bagging")
+
+        maiorAcc = -1
+        melhor_modelo = None
+
+        for classe_base in tqdm(estimador_range, desc="Estimadores", ascii=True):
+            for n_est in tqdm(n_estimadores_range, desc=f"n_estimators ({classe_base.__name__})", leave=False, ascii=True):
+                for n_samp in n_amostras_range:
+                    # Instancia o classificador base com valores default
+                    base = classe_base()
+                    
+                    # Cria o Bagging
+                    bag = BaggingClassifier(estimator=base, n_estimators=n_est, max_samples=n_samp, n_jobs=3)
+
+                    bag.fit(x_treino_s, y_treino)
+                    opiniao = bag.predict(x_val_s)
+                    Acc = accuracy_score(y_val, opiniao)
+                    
+                    if (Acc > maiorAcc):
+                        maiorAcc = Acc
+                        melhor_modelo = bag
+
+        if melhor_modelo is None:
+            cprint("Aviso: Nenhum modelo de Bagging foi gerado.", label="Bagging")
+            return 0, None
+
+        # Identifica o nome do melhor estimador base para o log
+        nome_base = type(getattr(melhor_modelo, 'estimator', getattr(melhor_modelo, 'base_estimator', None))).__name__
+
+        cprint("\nMelhor configuração para o Bagging", label="Bagging")
+        cprint(f"Estimador: {nome_base}, n_estimators: {melhor_modelo.n_estimators}, max_samples: {melhor_modelo.max_samples}, Acc: {maiorAcc}", label="Bagging")
+
+        """**Aplicando o melhor modelo sobre o conjunto de teste**"""
+        opiniao_teste = melhor_modelo.predict(x_teste_s)
+        acuracia_teste = accuracy_score(y_teste, opiniao_teste)
+        cprint(f"Acurácia sobre o teste: {acuracia_teste}", label="Bagging")
+
+        # Pipeline final para salvar o scaler junto
+        melhor_modelo_final = Pipeline([
+            ('scaler', scaler),
+            ('bagging', melhor_modelo)
+        ])
+
+        return acuracia_teste, melhor_modelo_final
+
 
     def metodo_boosting(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
+
+        cprint("Executando o Boosting (AdaBoost)...", label="Boosting")
+
+        # Escalonamento prévio para os estimadores que precisam (KNN, SVM, MLP)
+        scaler = StandardScaler()
+        x_treino_s = scaler.fit_transform(x_treino)
+        x_val_s = scaler.transform(x_val)
+        x_teste_s = scaler.transform(x_teste)
+
+        # Buscar:
+        # ● Número de estimadores (50 100 500)
+        # ● Taxa de aprendizado (0.01 0.1 1.0)
+        # ● Estimadores (os classificadores empregados terão seus hiperparâmetros setados com os valores default)
+
+        n_estimadores_range = [50, 100, 500] 
+        learning_rate_range = [0.01, 0.1, 1.0]
         
-        pass
+        # Nota: AdaBoost requer que o estimador base suporte pesos (sample_weight).
+        # DecisionTree, GaussianNB e SVC suportam. KNN e MLP não suportam no scikit-learn.
+        estimador_range = [DecisionTreeClassifier, GaussianNB, SVC] 
+
+        if self.modo_teste:
+            n_estimadores_range = [10] 
+            learning_rate_range = [0.1] 
+            estimador_range = [DecisionTreeClassifier]
+
+        cprint("Fazendo busca de hiperparametros...", label="Boosting")
+
+        maiorAcc = -1
+        melhor_modelo = None
+
+        for classe_base in tqdm(estimador_range, desc="Estimadores", ascii=True):
+            for n_est in tqdm(n_estimadores_range, desc=f"n_estimators ({classe_base.__name__})", leave=False, ascii=True):
+                for lr in learning_rate_range:
+                    # Instancia o classificador base com valores default
+                    base = classe_base()
+                    
+                    # AdaBoostClassifier
+                    boost = AdaBoostClassifier(estimator=base, n_estimators=n_est, learning_rate=lr)
+                    
+                    boost.fit(x_treino_s, y_treino)
+                    opiniao = boost.predict(x_val_s)
+                    Acc = accuracy_score(y_val, opiniao)
+                    
+                    if (Acc > maiorAcc):
+                        maiorAcc = Acc
+                        melhor_modelo = boost
+
+        if melhor_modelo is None:
+            cprint("Aviso: Nenhum modelo de Boosting foi gerado.", label="Boosting")
+            return 0, None
+
+        # Identifica o nome do melhor estimador base para o log
+        nome_base = type(getattr(melhor_modelo, 'estimator', getattr(melhor_modelo, 'base_estimator', None))).__name__
+
+        cprint("\nMelhor configuração para o Boosting", label="Boosting")
+        cprint(f"Estimador: {nome_base}, n_estimators: {melhor_modelo.n_estimators}, learning_rate: {melhor_modelo.learning_rate}, Acc: {maiorAcc}", label="Boosting")
+
+        """**Aplicando o melhor modelo sobre o conjunto de teste**"""
+        opiniao_teste = melhor_modelo.predict(x_teste_s)
+        acuracia_teste = accuracy_score(y_teste, opiniao_teste)
+        cprint(f"Acurácia sobre o teste: {acuracia_teste}", label="Boosting")
+
+        # Pipeline final para salvar o scaler junto
+        melhor_modelo_final = Pipeline([
+            ('scaler', scaler),
+            ('boosting', melhor_modelo)
+        ])
+
+        return acuracia_teste, melhor_modelo_final
 
     def metodo_combSoma(self, x_teste, y_teste, modelos_carregados):
         
