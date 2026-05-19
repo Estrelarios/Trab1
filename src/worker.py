@@ -177,7 +177,7 @@ def main():
         
         cprint(f"Iteração {args.iteracao} finalizada com sucesso!", label=f"CLT {args.iteracao}")
 
-        esperar = 10
+        esperar = 1
         cprint(f"Fechando em {esperar}s")
         time.sleep(esperar)
 
