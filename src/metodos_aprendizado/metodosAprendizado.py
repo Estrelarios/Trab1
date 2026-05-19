@@ -32,8 +32,9 @@ def um_menos_dist_norm(distances):
     # (isso acontece se todos os vizinhos estiverem no mesmo local do ponto de consulta)
     weights = np.where(max_dist > 0, 1 - (distances / max_dist), 1.0)
 
-    # Se todos os pesos de uma linha forem zero, coloca 1.0 em tudo (voto uniforme)
-    weights[np.all(weights == 0, axis=1)] = 1.0
+    # Garante que não existam pesos negativos e que a soma nunca seja zero
+    weights = np.clip(weights, 0, 1)
+    weights[np.all(weights <= 1e-10, axis=1)] = 1.0
 
     return weights
 
@@ -518,9 +519,11 @@ class MetodosAprendizado:
             
             # Esconde o MLPClassifier dentro de um Pipeline
             if classe_base == MLPClassifier:
-                n_estimadores_range = [5, 10, 15] 
+                n_estimadores_range_uso = [5, 10, 15] 
+            else:
+                n_estimadores_range_uso = n_estimadores_range 
             
-            for n_est in tqdm(n_estimadores_range, desc=f"n_estimators ({classe_base.__name__})", leave=False, ascii=True):
+            for n_est in tqdm(n_estimadores_range_uso, desc=f"n_estimators ({classe_base.__name__})", leave=False, ascii=True):
                 for n_samp in n_amostras_range:
            
                     # Cria o Bagging

@@ -33,20 +33,32 @@ def log_error(iteracao, error_msg):
         f.write("\n" + "="*50 + "\n\n")
 
 def salvar_resultados(df, caminho):
-    """Salva os resultados no CSV garantindo o alinhamento das colunas."""
-    while True:
+    """Salva os resultados no CSV garantindo o alinhamento das colunas e evitando condições de corrida."""
+    lock_path = caminho + ".lock"
+    max_tentativas = 100
+    atraso = 0.5
+
+    for _ in range(max_tentativas):
         try:
-            if os.path.exists(caminho):
-                # Lê o CSV existente para garantir que as colunas se alinhem
-                df_antigo = pd.read_csv(caminho)
-                # Concatena o novo resultado, alinhando as colunas automaticamente (pandas faz isso)
-                df_novo = pd.concat([df_antigo, df], ignore_index=True)
-                df_novo.to_csv(caminho, index=False)
-            else:
-                df.to_csv(caminho, index=False)
-            break 
-        except PermissionError:
-            time.sleep(1)
+            # Tenta criar o arquivo de lock de forma atômica
+            fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_RDWR)
+            try:
+                if os.path.exists(caminho):
+                    df_antigo = pd.read_csv(caminho)
+                    df_novo = pd.concat([df_antigo, df], ignore_index=True)
+                    df_novo.to_csv(caminho, index=False)
+                else:
+                    df.to_csv(caminho, index=False)
+                return # Sucesso
+            finally:
+                os.close(fd)
+                if os.path.exists(lock_path):
+                    os.remove(lock_path)
+        except (FileExistsError, PermissionError):
+            # Outro processo está escrevendo ou o arquivo está bloqueado
+            time.sleep(atraso)
+    
+    cprint(f"Erro: Não foi possível obter trava para {caminho} após {max_tentativas} tentativas.", label="ERR")
 
 def salvar_modelos(modelos : dict, iteracao, teste):
     """Salva os modelos gerados a partir da iteração"""
@@ -84,9 +96,12 @@ def main():
         # "metodo_mlp",
         # "metodo_knn",
         # "metodo_arvoreDecisao",
-        # "metodo_naiveBayes"
+        # "metodo_naiveBayes",
+        # "metodo_randomForest",
+        # "metodo_bagging",
+        # "metodo_boosting",
         "metodo_combSoma",
-        "metodo_combMajoritaria"
+        "metodo_combMajoritaria",
     ]
     # ---------------------------------------
 
@@ -162,7 +177,7 @@ def main():
         
         cprint(f"Iteração {args.iteracao} finalizada com sucesso!", label=f"CLT {args.iteracao}")
 
-        esperar = 15
+        esperar = 10
         cprint(f"Fechando em {esperar}s")
         time.sleep(esperar)
 
