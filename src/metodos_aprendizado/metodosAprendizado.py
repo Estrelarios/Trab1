@@ -19,7 +19,6 @@ from warnings import filterwarnings
 from sklearn.exceptions import ConvergenceWarning
 filterwarnings("ignore", category=ConvergenceWarning) # Filtra os warnings do MLP
 
-from processamento.pre_processamento import pre_processar_dados
 from utils.print_customizado import cprint
 from processamento.ler_dataset_processado import ler_datasets
 
@@ -147,14 +146,29 @@ class MetodosAprendizado:
         X = dados.iloc[:,1:]
         Y = dados.iloc[:,0]
         
-        x_treino, x_temp, y_treino, y_temp = train_test_split(X, Y, train_size=tam_treino, test_size=1-tam_treino, random_state=seed)
+        x_treino, x_temp, y_treino, y_temp = train_test_split(X, Y, train_size=tam_treino, test_size=1-tam_treino, random_state=seed, stratify=Y)
 
-        x_teste, x_val, y_teste, y_val = train_test_split(x_temp, y_temp, train_size=tam_teste, test_size=tam_validacao, random_state=seed)
+        x_teste, x_val, y_teste, y_val = train_test_split(x_temp, y_temp, train_size=tam_teste, test_size=tam_validacao, random_state=seed, stratify=y_temp)
 
         return x_treino, y_treino, x_teste, y_teste, x_val, y_val
 
     def metodo_knn(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
 
+        def um_menos_dist_norm(distances):
+            # distances shape: (n_amostras, n_vizinhos)
+            # Pegamos a maior distância de cada linha para normalizar
+            max_dist = np.max(distances, axis=1, keepdims=True)
+
+            # Criamos os pesos: 1 - (dist/max_dist)
+            # Usamos np.where para evitar divisão por zero caso a maior distância seja 0
+            # (isso acontece se todos os vizinhos estiverem no mesmo local do ponto de consulta)
+            weights = np.where(max_dist > 0, 1 - (distances / max_dist), 1.0)
+
+            # Se todos os pesos de uma linha forem zero, coloca 1.0 em tudo (voto uniforme)
+            weights[np.all(weights == 0, axis=1)] = 1.0
+
+            return weights
+                
         cprint("Executando o KNN...", label="KNN")
 
         # Escalonamento prévio
@@ -163,6 +177,9 @@ class MetodosAprendizado:
         x_val_s = scaler.transform(x_val)
 
         # Definido o range (reduzido para modo teste)
+        # O KNN não tem a função nativa de 1 - distancia normalizada para os pesos
+        # Mas permite que seja inserida uma função customizada para isso
+        tipos_pesamento = ["distance", "uniform", um_menos_dist_norm]
         k_range = range(1,51)
         if self.modo_teste:
             k_range = range(1,2)
@@ -172,7 +189,7 @@ class MetodosAprendizado:
         melhor_k = 1
         melhor_weights = "uniform"
 
-        for j in ("distance", "uniform"):
+        for j in tipos_pesamento:
             for i in tqdm(k_range, desc=f"weights='{j}'"):
                 KNN = KNeighborsClassifier(n_neighbors=i, weights=j, n_jobs=3)
                 KNN.fit(x_treino_s, y_treino)
@@ -658,16 +675,18 @@ class MetodosAprendizado:
         estimators = []
         probs = []
         for label, modelo in modelos_carregados.items():
-
+            # add todas as probabilidade em uma lista só
+            # probs terá o formato [modelo1[probs], modelo2[probs]...] 
             probs.append(modelo.predict_proba(x_teste))
 
-
         opiniao = []
-        # Para cada Amostras
+        # Para cada amostra
         for i in range(len(probs[0])): 
             
-            # votacao é um int
+            # votacao será um int
             # se for votado no pokemon 1, votacao--. Se for votado no 2, votacao++
+            # ao final, se votacao < 0, pokemon 1 foi o mais votado.
+            # se votacao > 0, pokemon 2 foi o mais votado
             votacao = 0
             # para cada modelo
             for j in range(len(probs)):
