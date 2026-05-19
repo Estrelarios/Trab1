@@ -22,6 +22,21 @@ filterwarnings("ignore", category=ConvergenceWarning) # Filtra os warnings do ML
 from utils.print_customizado import cprint
 from processamento.ler_dataset_processado import ler_datasets
 
+def um_menos_dist_norm(distances):
+    # distances shape: (n_amostras, n_vizinhos)
+    # Pegamos a maior distância de cada linha para normalizar
+    max_dist = np.max(distances, axis=1, keepdims=True)
+
+    # Criamos os pesos: 1 - (dist/max_dist)
+    # Usamos np.where para evitar divisão por zero caso a maior distância seja 0
+    # (isso acontece se todos os vizinhos estiverem no mesmo local do ponto de consulta)
+    weights = np.where(max_dist > 0, 1 - (distances / max_dist), 1.0)
+
+    # Se todos os pesos de uma linha forem zero, coloca 1.0 em tudo (voto uniforme)
+    weights[np.all(weights == 0, axis=1)] = 1.0
+
+    return weights
+
 class MetodosAprendizado:
     def __init__(self):
         self.modo_teste = False
@@ -153,21 +168,6 @@ class MetodosAprendizado:
         return x_treino, y_treino, x_teste, y_teste, x_val, y_val
 
     def metodo_knn(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
-
-        def um_menos_dist_norm(distances):
-            # distances shape: (n_amostras, n_vizinhos)
-            # Pegamos a maior distância de cada linha para normalizar
-            max_dist = np.max(distances, axis=1, keepdims=True)
-
-            # Criamos os pesos: 1 - (dist/max_dist)
-            # Usamos np.where para evitar divisão por zero caso a maior distância seja 0
-            # (isso acontece se todos os vizinhos estiverem no mesmo local do ponto de consulta)
-            weights = np.where(max_dist > 0, 1 - (distances / max_dist), 1.0)
-
-            # Se todos os pesos de uma linha forem zero, coloca 1.0 em tudo (voto uniforme)
-            weights[np.all(weights == 0, axis=1)] = 1.0
-
-            return weights
                 
         cprint("Executando o KNN...", label="KNN")
 
@@ -501,8 +501,8 @@ class MetodosAprendizado:
 
         n_estimadores_range = [50, 100, 500] 
         n_amostras_range = [0.1, 0.5, 0.7, 1.0] 
-        # estimador_range = [KNeighborsClassifier, SVC, DecisionTreeClassifier, MLPClassifier, GaussianNB]
-        estimador_range = [MLPClassifier]
+        estimador_range = [KNeighborsClassifier, SVC, DecisionTreeClassifier, MLPClassifier, GaussianNB]
+        # estimador_range = [MLPClassifier]
 
         if self.modo_teste:
             n_estimadores_range = [1] 
