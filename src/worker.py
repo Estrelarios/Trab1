@@ -56,6 +56,9 @@ def salvar_modelos(modelos : dict, iteracao, teste):
         os.makedirs(dir_salvamento)
 
     for chave, modelo in modelos.items():
+        if modelo is None:
+            continue
+            
         nome_modelo = chave.removeprefix("metodo_")
         nome_arquivo = f"{iteracao:02}_{nome_modelo}.joblib"
         caminho_salvamento = os.path.join(dir_salvamento, nome_arquivo)
@@ -77,7 +80,13 @@ def main():
     #           "metodo_combSoma", "metodo_combProduto", "metodo_combBordaCount"
     
     TECNICAS_PARA_RODAR = [
-        "metodo_randomForest"
+        # "metodo_svm",
+        # "metodo_mlp",
+        # "metodo_knn",
+        # "metodo_arvoreDecisao",
+        # "metodo_naiveBayes"
+        "metodo_combSoma",
+        "metodo_combMajoritaria"
     ]
     # ---------------------------------------
 
@@ -99,7 +108,7 @@ def main():
         modelos_carregados = None
         metodos_que_precisam_de_carga = [
             "metodo_combSoma", 
-            "metodo_combProduto", 
+            "metodo_combMajoritaria", 
             "metodo_combBordaCount", 
             "metodo_randomForest"
         ]
@@ -153,7 +162,7 @@ def main():
         
         cprint(f"Iteração {args.iteracao} finalizada com sucesso!", label=f"CLT {args.iteracao}")
 
-        esperar = 10
+        esperar = 15
         cprint(f"Fechando em {esperar}s")
         time.sleep(esperar)
 

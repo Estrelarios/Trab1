@@ -10,8 +10,10 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split
 
+
 from tqdm import tqdm
 from pandas import DataFrame
+import numpy as np
 import inspect
 from warnings import filterwarnings
 from sklearn.exceptions import ConvergenceWarning
@@ -111,6 +113,11 @@ class MetodosAprendizado:
         cprint(f"Carregando {len(arquivos)} modelos da iteração {iteracao}...", label="MA")
         for arq in arquivos:
             nome_tecnica = arq.replace(prefixo, "").replace(".joblib", "")
+
+            # só carrega modelos mono
+            if nome_tecnica in ["randomForest", "bagging", "boosting", "combSoma", "combMajoritaria", "combBordaCount"]:
+                continue
+
             caminho = os.path.join(dir_modelos, arq)
             try:
                 modelos_lidos[nome_tecnica] = jb.load(caminho)
@@ -286,7 +293,7 @@ class MetodosAprendizado:
         for kernel in tqdm(kernels, ascii=True, leave=False): # itera buscando o melhor kernel
             for C in tqdm(c_range, ascii=True): # itera buscando o melhor C para o kernel atual
                 cprint(f"Testando kernel='{kernel}', C={C}...", label="SVM")
-                SVM = SVC(kernel=kernel, C=C)
+                SVM = SVC(kernel=kernel, C=C, probability=True)
                 SVM.fit(x_treino_s, y_treino) # treina
                 opiniao = SVM.predict(x_val_s) # valida no conjunto de validação
                 acuracia = accuracy_score(y_val, opiniao) 
@@ -301,7 +308,7 @@ class MetodosAprendizado:
         # Cria o modelo final com Pipeline para incluir o scaler
         melhor_modelo = Pipeline([
             ('scaler', StandardScaler()),
-            ('svm', SVC(kernel=melhor_kernel, C=melhor_C))
+            ('svm', SVC(kernel=melhor_kernel, C=melhor_C, probability=True)),
         ])
         melhor_modelo.fit(x_treino, y_treino)
 
@@ -477,7 +484,8 @@ class MetodosAprendizado:
 
         n_estimadores_range = [50, 100, 500] 
         n_amostras_range = [0.1, 0.5, 0.7, 1.0] 
-        estimador_range = [KNeighborsClassifier, SVC, DecisionTreeClassifier, MLPClassifier, GaussianNB]
+        # estimador_range = [KNeighborsClassifier, SVC, DecisionTreeClassifier, MLPClassifier, GaussianNB]
+        estimador_range = [MLPClassifier]
 
         if self.modo_teste:
             n_estimadores_range = [1] 
@@ -490,13 +498,16 @@ class MetodosAprendizado:
         melhor_modelo = None
 
         for classe_base in tqdm(estimador_range, desc="Estimadores", ascii=True):
+            
+            # Esconde o MLPClassifier dentro de um Pipeline
+            if classe_base == MLPClassifier:
+                n_estimadores_range = [5, 10, 15] 
+            
             for n_est in tqdm(n_estimadores_range, desc=f"n_estimators ({classe_base.__name__})", leave=False, ascii=True):
                 for n_samp in n_amostras_range:
-                    # Instancia o classificador base com valores default
-                    base = classe_base()
-                    
+           
                     # Cria o Bagging
-                    bag = BaggingClassifier(estimator=base, n_estimators=n_est, max_samples=n_samp, n_jobs=3)
+                    bag = BaggingClassifier(estimator=classe_base(), n_estimators=n_est, max_samples=n_samp, n_jobs=3)
 
                     bag.fit(x_treino_s, y_treino)
                     opiniao = bag.predict(x_val_s)
@@ -563,6 +574,11 @@ class MetodosAprendizado:
         melhor_modelo = None
 
         for classe_base in tqdm(estimador_range, desc="Estimadores", ascii=True):
+            # Define se esta classe base precisa de dados escalonados
+            precisa_escalonar = classe_base in [SVC]
+            x_treino_uso = x_treino_s if precisa_escalonar else x_treino
+            x_val_uso = x_val_s if precisa_escalonar else x_val
+
             for n_est in tqdm(n_estimadores_range, desc=f"n_estimators ({classe_base.__name__})", leave=False, ascii=True):
                 for lr in learning_rate_range:
                     # Instancia o classificador base com valores default
@@ -571,13 +587,14 @@ class MetodosAprendizado:
                     # AdaBoostClassifier
                     boost = AdaBoostClassifier(estimator=base, n_estimators=n_est, learning_rate=lr)
                     
-                    boost.fit(x_treino_s, y_treino)
-                    opiniao = boost.predict(x_val_s)
+                    boost.fit(x_treino_uso, y_treino)
+                    opiniao = boost.predict(x_val_uso)
                     Acc = accuracy_score(y_val, opiniao)
                     
                     if (Acc > maiorAcc):
                         maiorAcc = Acc
                         melhor_modelo = boost
+                        modelo_precisou_escalonar = precisa_escalonar
 
         if melhor_modelo is None:
             cprint("Aviso: Nenhum modelo de Boosting foi gerado.", label="Boosting")
@@ -590,26 +607,218 @@ class MetodosAprendizado:
         cprint(f"Estimador: {nome_base}, n_estimators: {melhor_modelo.n_estimators}, learning_rate: {melhor_modelo.learning_rate}, Acc: {maiorAcc}", label="Boosting")
 
         """**Aplicando o melhor modelo sobre o conjunto de teste**"""
-        opiniao_teste = melhor_modelo.predict(x_teste_s)
+        x_teste_uso = x_teste_s if modelo_precisou_escalonar else x_teste
+        opiniao_teste = melhor_modelo.predict(x_teste_uso)
         acuracia_teste = accuracy_score(y_teste, opiniao_teste)
         cprint(f"Acurácia sobre o teste: {acuracia_teste}", label="Boosting")
 
-        # Pipeline final para salvar o scaler junto
-        melhor_modelo_final = Pipeline([
-            ('scaler', scaler),
-            ('boosting', melhor_modelo)
-        ])
+        # Se o modelo precisou de escalonamento, retorna um Pipeline com o scaler
+        if modelo_precisou_escalonar:
+            melhor_modelo_final = Pipeline([
+                ('scaler', scaler),
+                ('boosting', melhor_modelo)
+            ])
+        else:
+            melhor_modelo_final = melhor_modelo
 
         return acuracia_teste, melhor_modelo_final
 
-    def metodo_combSoma(self, x_teste, y_teste, modelos_carregados):
-        
-        pass
+    def metodo_combSoma(self, x_treino, x_teste, y_treino, y_teste, modelos_carregados : dict):
 
-    def metodo_combProduto(self, x_teste, y_teste, modelos_carregados):
-        
-        pass
+        # modelos_carregados tem a estrutura { "knn": modelo, "arvoreDecisao": modelo, ... }
+        cprint("Executando o combinação majoritária ...", label="SOMA")
 
-    def metodo_combBordaCount(self, x_teste, y_teste, modelos_carregados):
+        estimators = []
+        soma_probs = None
+        for label, modelo in modelos_carregados.items():
+
+            probs = modelo.predict_proba(x_teste)
+
+            # Vai somando as probabilidades
+            if soma_probs is None:
+                soma_probs = probs
+            else:
+                soma_probs += probs
+
+        opiniao = []
+        # Para cada amostra pega o vitorioso
+        # argmax([x,y]) verifica qual é maior (x ou y) e retorna seu indice 
+        for amostra_prob in soma_probs:
+            opiniao.append(np.argmax(amostra_prob))
+
+        acuracia = accuracy_score(y_teste, opiniao)
+        cprint(f"Acurácia sobre o teste: {acuracia}", label="SOMA")
+
+        return acuracia, None
+      
+    def metodo_combMajoritaria(self, x_treino, x_teste, y_treino, y_teste, modelos_carregados : dict):
+
+        cprint("Executando o combinação majoritária ...", label="MAJOR")
+
+        estimators = []
+        probs = []
+        for label, modelo in modelos_carregados.items():
+
+            probs.append(modelo.predict_proba(x_teste))
+
+
+        opiniao = []
+        # Para cada Amostras
+        for i in range(len(probs[0])): 
+            
+            # votacao é um int
+            # se for votado no pokemon 1, votacao--. Se for votado no 2, votacao++
+            votacao = 0
+            # para cada modelo
+            for j in range(len(probs)):
+                
+                # confiança de cada modelo (prob. de ser winner pokemon 1 ou 2 )
+                p_1 = probs[j][i][0]
+                p_2 = probs[j][i][1]
+                
+                if p_1 > p_2:
+                    votacao -= 1
+                else:
+                    votacao += 1 
+
+            if votacao < 0: # 1 foi mais votado
+                opiniao.append(0)
+            elif votacao > 0: # 2 foi mais votado
+                opiniao.append(1)
+            else:
+                # Erro, votação deu 0
+                cprint("Erro: alguma votação tem valor 0. Isso significa que ou ninguém votou ou há um número igual de votos para o pokemon 1 e para o 2, o que significa que alguém não votou.", label="MAJOR")
+            
+        acuracia = accuracy_score(y_teste, opiniao)
+        cprint(f"Acurácia sobre o teste: {acuracia}", label="MAJOR")
+
+        return acuracia, None 
+
+    # def metodo_combBordaCount(self, x_teste, y_teste, modelos_carregados : dict[str, KNeighborsClassifier]):
+
+    #     prob_estimators = {}
         
-        pass
+    #     primeiro_pokemon = 0 # primeira posicao da tupla
+    #     segundo_pokemon = 0 # segunda posicao da tupla
+
+    #     # Dict para guardar probabilidades dos estimadores
+    #     # { "knn" : [p_0, p_1] } 0 = pokemon 1 venceu, 1 = pokemon 2 venceu
+
+    #     # Matriz para guardar as probabilidades
+    #     # [knn,AD,...]
+    #     # amostra1 -> [p_1,p_1, p_1]
+    #     # amostra2 -> ...
+
+    #     for label, modelo in modelos_carregados.items():
+    #             prob_estimators[label] = modelo.predict_proba(x_teste)
+
+    #     for amostra_i in range(len(x_teste)):
+
+    #         modelos =  {}
+
+    #         for label, batalhas in prob_estimators.items():
+
+    #             # para cada batalha da amostra_i, pega a probabilidade de cada pokemon vencer
+    #             prob_batalha = batalhas[amostra_i] # [p_0, p_1]
+                
+                
+            
+
+            
+    #             # pega o ranking baseado na opinião de cada modelo
+    #             # faz o teste de qm tem mais confiança
+    #             # salva
+            
+    #         # prob_estimators[knn] = probs_knn
+    #         # prob_estimators[svm] = probs_svm
+
+    #     # Ter a seguinte estrutra:
+
+    #     # Probs = [Modelo[Amostra[P_0, P_1]]]
+    #     # Probs = [
+    #     #          [ # KNN
+    #     #           [0.85, 0.15], # amostra 1
+    #     #           [0.5, 0.5], # amostra 2
+    #     #           [P0, P1], # amostra n
+    #     #           ...
+    #     #          ],
+
+    #     #          [ # SVM
+    #     #          ... 
+    #     #          ] #
+    #     #
+
+    #     # Para cada amostra
+    #     for amostra_i in range(len(x_teste)):
+
+    #         # para cada prob_estimators:
+                
+
+
+            
+    #     # testa as opiniões contra y_teste
+    #     # pega a acuracia do borda count
+    #     # return acuracia
+
+    #     for label, modelo in modelos_carregados.items(): # salva a probabilidade de cada modelo 
+            
+            
+    #         prob_estimators[label] = modelo.predict_proba(x_teste)
+
+    #         # prob_estimators["knn"] = [
+    #         # [0.85, 0.15],  # Batalha 1
+    #         # [0.30, 0.70],  # Batalha 2
+    #         # [p_0, p_1]   # Batalha n
+    #         # ]
+
+    #         # Para cada amostra do x_teste, precisamos pegar a probabilidade que cada modelo
+    #         # prevê e fazer um ranking reverso (menor probabilidade ficará em primeiro e
+    #         # maior probabilidade receberá o 2º lugar) 
+
+    #         opiniao = {}
+    #         opiniao_primeiro = 0
+    #         opiniao_segundo = 0
+    
+    #         for prob in prob_estimators[label]: # itera pelas 5000 batalhas de cada modelo, que é capturado pela key do dict
+                
+    #             p_0, p_1 = prob
+
+    #             if p_0 > p_1:
+    #                 opiniao_primeiro += 2
+    #                 opiniao_segundo += 1
+    #             elif p_1 > p_0:
+    #                 opiniao_segundo += 2
+    #                 opiniao_primeiro += 1
+
+    #             previsao_knn = [1,0]
+                
+
+    #             # resulta em  2 valores, a pontuação do primeiro pokemon e a pontuação do segundo pokemon, para cada modelo
+    #             # Salva como knn : [pontuação primeiro pokemon, pontuação segundo pokemon]
+
+    #             opiniao[label] = [opiniao_primeiro, opiniao_segundo] 
+
+    #             opiniao = [1,0,1,1,0,1]
+    #             y_teste
+
+    #         opiniao.append(classe_preditiva)
+
+    #     for  modelo in prob_estimators.items():
+
+    #         borda = prob_estimators[modelo]
+
+    #         if borda[0] > borda[1]:
+    #             primeiro_pokemon += 1
+    #         elif borda[1] > borda[0]:
+    #             segundo_pokemon += 1
+
+    #     return acuracia_teste, melhor_modelo
+    
+# Boa tarde professor, tenho uma duvida perante o trabalho 1 de AM
+# Meu dataset é o de batalhas pokemon, onde o objetivo é prever o vencedor da batalha com base nas estatísticas dos pokemons.
+# Minha duvida reside na implementação dos métodos de combinação de classificadores devido ao seguinte impasse:
+# As classes utilizadas para o treinamento não contém por si mesmas a resposta que buscamos, qual pokemon dentre os 2 tem a maior probabilidade de vencer a batalha.
+# Desta forma, como implementamos o borda count? Podemos atribuir ranks para cada uma das estatísticas dos pokemons, mas não vejo utilidade nisso, visto que tais não contém a resposta que buscamos.
+# Tentamos implementar o borda count utilizando as probabilidades de cada modelo para cada pokemon, ou seja, cada modelo atribui uma probabilidade de vitória para cada pokemon, e o pokemon com a maior probabilidade recebe um ponto. 
+# No entanto, isso se assemelha mais a uma votação majoritária do que ao borda count tradicional, Além de não ser possível objetificar o que mandar para a instância de teste, como escrito no slide "A classe que possuir o maior somatório de ranks é atribuída à instância de teste".
+# Não sabemos como encaixar essa situação no borda count
