@@ -88,7 +88,13 @@ def main():
 
     # ── Modo análise ──────────────────────────────────────────────────────────
     if args.analise:
-        caminho_csv = r"C:\Users\Usuario\Desktop\Unio\Machine Learning\Trab1\resultados\resultados.csv"
+        
+        caminho_csv = os.path.join(resultados_dir, "resultados.csv")
+        
+        if not os.path.exists(caminho_csv):
+            cprint(f"Arquivo não encontrado para análise: {caminho_csv}", label="ANÁLISE")
+            return
+
         historico = carregar_historico(caminho_csv)
 
         stat, p_valor = teste_friedman(historico, confianca=0.95)
