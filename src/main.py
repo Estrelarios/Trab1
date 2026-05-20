@@ -87,7 +87,6 @@ def main():
         os.makedirs(resultados_dir)
 
     # ── Modo análise ──────────────────────────────────────────────────────────
-# ── Modo análise ──────────────────────────────────────────────────────────
     if args.analise:
         caminho_csv = r"C:\Users\Usuario\Desktop\Unio\Machine Learning\Trab1\resultados\resultados.csv"
         historico = carregar_historico(caminho_csv)

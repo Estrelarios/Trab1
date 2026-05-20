@@ -100,8 +100,9 @@ def main():
         # "metodo_randomForest",
         # "metodo_bagging",
         # "metodo_boosting",
-        "metodo_combSoma",
-        "metodo_combMajoritaria",
+        # "metodo_combSoma",
+        # "metodo_combMajoritaria",
+        "metodo_combBordaCount",
     ]
     # ---------------------------------------
 

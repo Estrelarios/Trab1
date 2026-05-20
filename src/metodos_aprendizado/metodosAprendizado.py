@@ -717,32 +717,47 @@ class MetodosAprendizado:
 
         return acuracia, None 
 
-    # def metodo_combBordaCount(self, x_teste, y_teste, modelos_carregados : dict[str, KNeighborsClassifier]):
+    def metodo_combBordaCount(self, x_treino, x_teste, y_treino, y_teste, modelos_carregados: dict):
 
-    #     prob_estimators = {}
-        
-    #     primeiro_pokemon = 0 # primeira posicao da tupla
-    #     segundo_pokemon = 0 # segunda posicao da tupla
+        cprint("Executando a combinação Borda Count...", label="BORDA")
 
-    #     # Dict para guardar probabilidades dos estimadores
-    #     # { "knn" : [p_0, p_1] } 0 = pokemon 1 venceu, 1 = pokemon 2 venceu
+        # Coleta as probabilidades de cada modelo
+        # probs_por_modelo[i] = array (n_amostras, n_classes) do modelo i
+        probs_por_modelo = []
+        for label, modelo in modelos_carregados.items():
+            probs_por_modelo.append(modelo.predict_proba(x_teste))
 
-    #     # Matriz para guardar as probabilidades
-    #     # [knn,AD,...]
-    #     # amostra1 -> [p_1,p_1, p_1]
-    #     # amostra2 -> ...
+        n_amostras = len(x_teste)
+        n_classes = 2  # pokemon 1 (idx 0) ou pokemon 2 (idx 1)
 
-    #     for label, modelo in modelos_carregados.items():
-    #             prob_estimators[label] = modelo.predict_proba(x_teste)
+        opiniao = []
 
-    #     for amostra_i in range(len(x_teste)):
+        for i in range(n_amostras):
 
-    #         modelos =  {}
+            # Acumula os ranks de cada classe para a amostra i
+            borda_scores = np.zeros(n_classes)
 
-    #         for label, batalhas in prob_estimators.items():
+            for probs in probs_por_modelo: # para cada batalha no dataset 
 
-    #             # para cada batalha da amostra_i, pega a probabilidade de cada pokemon vencer
-    #             prob_batalha = batalhas[amostra_i] # [p_0, p_1]
+                p_classe_0 = probs[i][0]
+                p_classe_1 = probs[i][1]
+
+                # O mais confiante recebe rank 2, o menos confiante recebe rank 1
+                if p_classe_0 > p_classe_1:
+                    borda_scores[0] += 2
+                    borda_scores[1] += 1
+                else:
+                    borda_scores[0] += 1
+                    borda_scores[1] += 2
+
+            # A classe com maior somatório de ranks vence
+            opiniao.append(np.argmax(borda_scores))
+
+        acuracia = accuracy_score(y_teste, opiniao)
+        cprint(f"Acurácia sobre o teste: {acuracia}", label="BORDA")
+
+
+        return acuracia, None
                 
                 
             
