@@ -1,50 +1,24 @@
-# Decisões de projeto
+# Decisões de Projeto - Trabalho 1 (AM)
 
-## Pre processamento de datasets
-1. Retiramos os atributos #, Nome do pokemon, Legendary e Generation
-2. Usamos variável dummy para binarizar os tipos primário e secundário do pokemon
+Este documento resume as escolhas que fizemos durante o desenvolvimento do trabalho e por que as tomamos.
 
-Reduzimos a quantidade de batalhas para 5k
-utilizamos a seeds por iteração igual ao número da iteração
+## 1. Pré-processamento e Amostragem
+*   **Decisão:** Reduzimos o dataset para 5.000 batalhas, usando amostragem estratificada.
+*   **Justificativa:** O dataset original de 50.000 batalhas estava demorando demais para treinar (mais de 8 horas só para o SVM com C=1000). Escolhemos 5.000 instâncias para o projeto ser executável no tempo disponível, usando estratificação para garantir que a proporção de vitórias (Winner) não fosse alterada.
+*   **Atributos:** Retiramos os atributos #, Nome do Pokémon, Legendary e Generation, pois não ajudam na predição de quem vence a luta. Usamos codificação One-Hot para transformar os tipos primário e secundário em colunas binárias.
 
-## Bagging e Boosting
+## 2. Reprodutibilidade (Seeds)
+*   **Decisão:** Usamos o número da iteração (1 a 20) como semente (seed) para o sorteio dos dados.
+*   **Justificativa:** Isso garante que cada uma das 20 repetições exigidas pelo professor use dados diferentes (e aleatórios), mas que qualquer pessoa consiga rodar o código e chegar nos mesmos resultados que nós.
 
-Não sei se entendi bem a especificação para implementar o bagging e boosting.
+## 3. Boosting apenas com 3 estimadores
+*   **Decisão:** Não incluímos KNN e MLP na lista de estimadores base do Boosting (AdaBoost).
+*   **Justificativa:** O AdaBoost do scikit-learn precisa que o estimador aceite pesos nas amostras (`sample_weight`) durante o treino. Como o KNN e o MLP não suportam isso nativamente, o código quebraria com erro de `TypeError`. Por isso, focamos em Árvore de Decisão, Naive Bayes e SVM.
 
-O tópico "Estimadores (os classificadores empregados terão seus 
-hiperparâmetros setados com os valores default)" dá a entender que não é para usar os modelos salvos já treinados.
+## 4. Bagging com MLP
+*   **Decisão:** Diminuímos a quantidade de estimadores (`n_estimators`) especificamente quando o Bagging usa MLP.
+*   **Justificativa:** Estavam ocorrendo muitos erros de convergência quando tentávamos rodar muitos estimadores MLP em paralelo. Reduzir para valores menores ([5, 10, 15]) resolveu o problema e permitiu que o treino finalizasse com sucesso.
 
-## Metodos a executar
-
-**Problema:** Do jeito que o projeto está (até o commit FEAT: implementa salvar modelos 8ce69cf156a0af265a9641fcb2b5c08f5c5e01fd), não há como executar um conjunto específico de metodos. Teria que executar tudo de novo para poder rodar métodos que ainda não foram implementados, o que é lento.
-
-**Solução:** Definir quais métodos serão executados e salvar em csvs diferentes (concatenar manualmente depois).
-
-## StandardScaler
-
-Antes de qualquer exeução dos métodos SVM, KNN e MLP foi aplicado um standardScalar nos dados para melhorar performance.
-
-## Boosting apenas com 3 estimadores
-
-GEMINI disse o seguinte:
-
-```
-O algoritmo AdaBoost funciona atribuindo pesos às amostras a cada iteração (focando nas que o modelo anterior errou).
-  Para isso, ele exige que o estimador base suporte o parâmetro sample_weight no método .fit().
-
-  No scikit-learn:
-   1. DecisionTreeClassifier: Suporta pesos (é o padrão do Boosting).
-   2. GaussianNB: Suporta pesos.
-   3. SVC (SVM): Suporta pesos.
-   4. KNeighborsClassifier (KNN): Não suporta pesos de amostra.
-   5. MLPClassifier (Neural Network): Não suporta pesos de amostra.
-
-  Se eu adicionar o KNN ou o MLP na lista do Boosting, o código irá quebrar com um erro de TypeError assim que o
-  AdaBoost tentar treiná-los, avisando que eles não aceitam o argumento sample_weight.```
-
-Dito isso, não está fazendo com knn e mlp, mas não testei se da mesmo esse erro
-
-## MLP no Bagging
-
-MLP não estava funcionando dentro do bagging. Não descobrimos o porquê. Acredito que reduzir a quantidade de estimadores na busca de hiperparâmetros resolveu o problema. Assim, os valores para o parâmetro n_estimators do bagging foram reduzidos quando a busca era feita para o Classificador MLP.
-
+## 5. Escalonamento de Dados (StandardScaler)
+*   **Decisão:** Aplicamos o `StandardScaler` nos dados antes de rodar SVM, KNN e MLP.
+*   **Justificativa:** Como esses modelos dependem de cálculos de distância ou gradiente, eles funcionam muito melhor se os dados estiverem na mesma escala. Usamos o `Pipeline` para garantir que o escalonamento do treino não "vazasse" informações para os conjuntos de teste e validação.
