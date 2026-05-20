@@ -13,7 +13,7 @@ import argparse
 sys.path.append(os.path.dirname(__file__))
 
 from utils.print_customizado import cprint
-from testes_estatisticos.testes import teste_friedman
+from testes_estatisticos.testes import teste_friedman, teste_nemenyi
 
 # Define a raiz do projeto
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -90,7 +90,12 @@ def main():
     if args.analise:
         caminho_csv = r"C:\Users\Usuario\Desktop\Unio\Machine Learning\Trab1\resultados\resultados.csv"
         historico = carregar_historico(caminho_csv)
-        teste_friedman(historico, confianca=0.95)
+
+        stat, p_valor = teste_friedman(historico, confianca=0.95)
+
+        if p_valor < 0.05:
+            teste_nemenyi(historico, confianca=0.95)
+    
         return
 
     # ── Modo pipeline normal ──────────────────────────────────────────────────

@@ -13,7 +13,6 @@ from sklearn.model_selection import train_test_split
 
 
 from tqdm import tqdm
-from pandas import DataFrame
 import numpy as np
 import inspect
 from warnings import filterwarnings
@@ -142,7 +141,7 @@ class MetodosAprendizado:
 
         return modelos_lidos
 
-    def split_dataset(self, dados : DataFrame, tam_treino=0.5, tam_teste=0.25, tam_validacao=0.25, seed=None):
+    def split_dataset(self, dados, tam_treino=0.5, tam_teste=0.25, tam_validacao=0.25, seed=None):
         """Aplica o train_test_split duas vezes para dividir os dados em treino (50%), teste (25%) e validação (25%)
 
         Args:
@@ -561,7 +560,6 @@ class MetodosAprendizado:
 
         return acuracia_teste, melhor_modelo_final
 
-
     def metodo_boosting(self, x_treino, y_treino, x_teste, y_teste, x_val, y_val):
 
         cprint("Executando o Boosting (AdaBoost)...", label="Boosting")
@@ -758,105 +756,3 @@ class MetodosAprendizado:
 
 
         return acuracia, None
-                
-                
-            
-
-            
-    #             # pega o ranking baseado na opinião de cada modelo
-    #             # faz o teste de qm tem mais confiança
-    #             # salva
-            
-    #         # prob_estimators[knn] = probs_knn
-    #         # prob_estimators[svm] = probs_svm
-
-    #     # Ter a seguinte estrutra:
-
-    #     # Probs = [Modelo[Amostra[P_0, P_1]]]
-    #     # Probs = [
-    #     #          [ # KNN
-    #     #           [0.85, 0.15], # amostra 1
-    #     #           [0.5, 0.5], # amostra 2
-    #     #           [P0, P1], # amostra n
-    #     #           ...
-    #     #          ],
-
-    #     #          [ # SVM
-    #     #          ... 
-    #     #          ] #
-    #     #
-
-    #     # Para cada amostra
-    #     for amostra_i in range(len(x_teste)):
-
-    #         # para cada prob_estimators:
-                
-
-
-            
-    #     # testa as opiniões contra y_teste
-    #     # pega a acuracia do borda count
-    #     # return acuracia
-
-    #     for label, modelo in modelos_carregados.items(): # salva a probabilidade de cada modelo 
-            
-            
-    #         prob_estimators[label] = modelo.predict_proba(x_teste)
-
-    #         # prob_estimators["knn"] = [
-    #         # [0.85, 0.15],  # Batalha 1
-    #         # [0.30, 0.70],  # Batalha 2
-    #         # [p_0, p_1]   # Batalha n
-    #         # ]
-
-    #         # Para cada amostra do x_teste, precisamos pegar a probabilidade que cada modelo
-    #         # prevê e fazer um ranking reverso (menor probabilidade ficará em primeiro e
-    #         # maior probabilidade receberá o 2º lugar) 
-
-    #         opiniao = {}
-    #         opiniao_primeiro = 0
-    #         opiniao_segundo = 0
-    
-    #         for prob in prob_estimators[label]: # itera pelas 5000 batalhas de cada modelo, que é capturado pela key do dict
-                
-    #             p_0, p_1 = prob
-
-    #             if p_0 > p_1:
-    #                 opiniao_primeiro += 2
-    #                 opiniao_segundo += 1
-    #             elif p_1 > p_0:
-    #                 opiniao_segundo += 2
-    #                 opiniao_primeiro += 1
-
-    #             previsao_knn = [1,0]
-                
-
-    #             # resulta em  2 valores, a pontuação do primeiro pokemon e a pontuação do segundo pokemon, para cada modelo
-    #             # Salva como knn : [pontuação primeiro pokemon, pontuação segundo pokemon]
-
-    #             opiniao[label] = [opiniao_primeiro, opiniao_segundo] 
-
-    #             opiniao = [1,0,1,1,0,1]
-    #             y_teste
-
-    #         opiniao.append(classe_preditiva)
-
-    #     for  modelo in prob_estimators.items():
-
-    #         borda = prob_estimators[modelo]
-
-    #         if borda[0] > borda[1]:
-    #             primeiro_pokemon += 1
-    #         elif borda[1] > borda[0]:
-    #             segundo_pokemon += 1
-
-    #     return acuracia_teste, melhor_modelo
-    
-# Boa tarde professor, tenho uma duvida perante o trabalho 1 de AM
-# Meu dataset é o de batalhas pokemon, onde o objetivo é prever o vencedor da batalha com base nas estatísticas dos pokemons.
-# Minha duvida reside na implementação dos métodos de combinação de classificadores devido ao seguinte impasse:
-# As classes utilizadas para o treinamento não contém por si mesmas a resposta que buscamos, qual pokemon dentre os 2 tem a maior probabilidade de vencer a batalha.
-# Desta forma, como implementamos o borda count? Podemos atribuir ranks para cada uma das estatísticas dos pokemons, mas não vejo utilidade nisso, visto que tais não contém a resposta que buscamos.
-# Tentamos implementar o borda count utilizando as probabilidades de cada modelo para cada pokemon, ou seja, cada modelo atribui uma probabilidade de vitória para cada pokemon, e o pokemon com a maior probabilidade recebe um ponto. 
-# No entanto, isso se assemelha mais a uma votação majoritária do que ao borda count tradicional, Além de não ser possível objetificar o que mandar para a instância de teste, como escrito no slide "A classe que possuir o maior somatório de ranks é atribuída à instância de teste".
-# Não sabemos como encaixar essa situação no borda count
