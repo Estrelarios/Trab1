@@ -86,25 +86,20 @@ def main():
     args = parser.parse_args()
 
     # --- CONFIGURAÇÃO MANUAL DE TÉCNICAS ---
-    # Adicione ou remova os métodos que deseja executar nesta rodada.
-    # Exemplos: "metodo_knn", "metodo_arvoreDecisao", "metodo_naiveBayes", "metodo_svm", "metodo_mlp",
-    #           "metodo_randomForest", "metodo_bagging", "metodo_boosting", 
-    #           "metodo_combSoma", "metodo_combProduto", "metodo_combBordaCount"
     
     TECNICAS_PARA_RODAR = [
-        # "metodo_svm",
-        # "metodo_mlp",
-        # "metodo_knn",
-        # "metodo_arvoreDecisao",
-        # "metodo_naiveBayes",
-        # "metodo_randomForest",
-        # "metodo_bagging",
-        # "metodo_boosting",
-        # "metodo_combSoma",
-        # "metodo_combMajoritaria",
-        "metodo_combBordaCount",
+        "metodo_knn",
+        "metodo_arvoreDecisao",
+        "metodo_naiveBayes",
+        "metodo_svm",
+        "metodo_mlp",
+        "metodo_randomForest",
+        "metodo_bagging",
+        "metodo_boosting",
+        "metodo_combSoma",
+        "metodo_combMajoritaria",
+        "metodo_combBordaCount"
     ]
-    # ---------------------------------------
 
     try:
         cprint(f"Iniciando Iteração {args.iteracao}...", label=f"CLT {args.iteracao}")

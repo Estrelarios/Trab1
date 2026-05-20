@@ -112,7 +112,7 @@ def reduzir_dataset(df, n_amostras=5000):
       df, 
       train_size=n_amostras, 
       stratify=df['Winner'], 
-      random_state=42 # Seed fixa para consistência entre execuções de pré-processamento
+      random_state=42 # Seed fixa para consistência
   )
 
   cprint(f"Redução concluida!")
@@ -128,7 +128,7 @@ def pre_processar_dados():
 
   df_combats_proc = pre_processar_dataset_combats(df_combats, df_pokemon_proc)
 
-  # Reduzir para 5k batalhas conforme decisão científica
+  # Reduzir para 5k batalhas
   df_combats_proc = reduzir_dataset(df_combats_proc, n_amostras=5000)
 
   # Salva o dataset processado
@@ -150,7 +150,6 @@ def main():
     dados = ler_datasets()
 
     cprint("Processamento concluído!")
-    # cprint(f"{dados.head()}")
 
 if __name__ == "__main__":
   main()
