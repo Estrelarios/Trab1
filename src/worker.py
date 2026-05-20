@@ -93,12 +93,12 @@ def main():
         "metodo_naiveBayes",
         "metodo_svm",
         "metodo_mlp",
-        "metodo_randomForest",
         "metodo_bagging",
         "metodo_boosting",
-        "metodo_combSoma",
-        "metodo_combMajoritaria",
-        "metodo_combBordaCount"
+        # "metodo_randomForest",
+        # "metodo_combSoma",
+        # "metodo_combMajoritaria",
+        # "metodo_combBordaCount"
     ]
 
     try:
