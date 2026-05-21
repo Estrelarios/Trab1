@@ -1,7 +1,7 @@
 *cache*
 *pyc*
 *.venv*
-*teste*
+*teste
 
 /correlacao
 /logs
