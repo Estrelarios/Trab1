@@ -88,6 +88,24 @@ def main():
 
     # ── Modo análise ──────────────────────────────────────────────────────────
     if args.analise:
+        historico_resultados = carregar_historico(os.path.join(resultados_dir, "resultados.csv"))
+                # Separar os grupos
+        monoliticos = {k: v for k, v in historico_resultados.items() if k in [
+            "metodo_knn",
+            "metodo_arvoreDecisao",
+            "metodo_naiveBayes",
+            "metodo_svm",
+            "metodo_mlp"
+        ]}
+
+        ensemble_combinacao = {k: v for k, v in historico_resultados.items() if k in [
+            "metodo_randomForest",
+            "metodo_bagging",
+            "metodo_boosting",
+            "metodo_combSoma",
+            "metodo_combMajoritaria",
+            "metodo_combBordaCount"
+        ]}
         
         caminho_csv = os.path.join(resultados_dir, "resultados.csv")
         
@@ -101,7 +119,19 @@ def main():
 
         if p_valor < 0.05:
             teste_nemenyi(historico, confianca=0.95)
-    
+
+        # Teste apenas monolíticos
+        print("\n>>> Análise estatística — Monolíticos")
+        stat, p = teste_friedman(monoliticos)
+        if p < 0.05:
+            teste_nemenyi(monoliticos)
+
+        # Teste apenas ensemble e combinação
+        print("\n>>> Análise estatística — Ensemble e Combinação")
+        stat, p = teste_friedman(ensemble_combinacao)
+        if p < 0.05:
+            teste_nemenyi(ensemble_combinacao)
+            
         return
 
     # ── Modo pipeline normal ──────────────────────────────────────────────────
